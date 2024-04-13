@@ -1,14 +1,13 @@
 #pragma once
 
-#include <bit>
-#include <concepts>
-#include <cstdint>
 #include <cstring>
-#include <filesystem>
 #include <fstream>
-#include <string>
 #include <stdexcept>
-#include <vector>
+#include <cstdint>      // C++11
+#include <filesystem>   // C++17
+#include <vector>       // C++17 (size)
+#include <concepts>     // C++20
+#include <bit>          // C++23 (byteswap)
 
 namespace kojo {
 
