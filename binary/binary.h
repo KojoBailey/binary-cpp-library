@@ -11,13 +11,14 @@
 
 namespace kojo {
 
-class Binary {
+class binary {
 public:
     std::vector<char> data;
+    size_t cursor{0};
 
     void load(std::filesystem::path path_input) {
         file_input.open(path_input, std::ios::binary);
-        position = 0;
+        cursor = 0;
         
         /* Read file to vector for faster access. */
         data.clear();
@@ -34,11 +35,11 @@ public:
         }
     }
 
-    Binary() {};
-    Binary(std::filesystem::path path_input) {
+    binary() {};
+    binary(std::filesystem::path path_input) {
         load(path_input);
     }
-    Binary(std::vector<char>& vector_data, size_t start = 0, size_t end = -1) {
+    binary(std::vector<char>& vector_data, size_t start = 0, size_t end = -1) {
         load(vector_data, start, end);
     }
 
@@ -52,14 +53,14 @@ public:
     template <std::integral INTEGRAL>
     INTEGRAL b_read(std::endian endian) {
         INTEGRAL buffer;
-        std::memcpy(&buffer, &data[position], sizeof(buffer));
+        std::memcpy(&buffer, &data[cursor], sizeof(buffer));
         buffer = set_endian(buffer, endian);
-        position += sizeof(buffer);
+        cursor += sizeof(buffer);
         return buffer;
     }
     template <std::same_as<char> CHAR>
     CHAR b_read() {
-        CHAR buffer = data[position++];
+        CHAR buffer = data[cursor++];
         return buffer;
     }
     template <std::same_as<std::string> STRING>
@@ -68,40 +69,36 @@ public:
         STRING buffer = "";
         if (size > 0) {
             for (int i = 0; i < size; i++) {
-                if (data[position] != '\0') {
-                    buffer += data[position];
+                if (data[cursor] != '\0') {
+                    buffer += data[cursor];
                 }
-                position++;
+                cursor++;
             }
         } else {
-            for (int i = 0; data[position] != '\0'; i++) {
-                buffer += data[position];
-                position++;
+            for (int i = 0; data[cursor] != '\0'; i++) {
+                buffer += data[cursor];
+                cursor++;
             }
-            position++;
+            cursor++;
         }
         return buffer;
     }
 
     void b_move(size_t size) {
-        position += size;
+        cursor += size;
     }
     void b_align(size_t bytes) {
-        position--;
-        position += bytes - ( position % bytes );
+        cursor--;
+        cursor += bytes - ( cursor % bytes );
     }
 
-    size_t get_pos() {
-        return position;
-    }
-    void set_pos(size_t target) {
-        position = target;
+    size_t get_size() {
+        return data.size();
     }
 
 private:
     std::ifstream file_input;
     std::ofstream file_output;
-    size_t position = 0;
 };
 
 }
