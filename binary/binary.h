@@ -10,24 +10,27 @@
 #include <concepts>     // C++20
 #include <bit>          // C++23 (byteswap)
 
+/** @note Not `KojoBailey` like on GitHub since that's a bit tedious. */
 namespace kojo {
 
 class binary {
 public:
-    std::vector<char> data;
-    size_t cursor{0};
+    std::vector<char> data; // Each char represents a byte.
+    size_t cursor{0};       // The current position in the data.
 
+    /* Load binary data from filepath. */
     void load(std::filesystem::path path_input) {
         file_input.open(path_input, std::ios::binary);
         cursor = 0;
         
-        /* Read file to vector for faster access. */
+        // Read file to vector for faster access.
         data.clear();
         while (file_input.peek() != EOF) {
             data.push_back(file_input.get());
         }
         file_input.close();
     }
+    /* Load binary data from an existing char vector. */
     void load(std::vector<char>& vector_data, size_t start = 0, size_t end = -1) {
         if (end == -1) end = vector_data.size();
         data.clear();
@@ -36,14 +39,21 @@ public:
         }
     }
 
+    /* Default constructor. Does nothing. */
     binary() {};
+    /** Initialise binary data from filepath. @note Same as using `.load()` later. */
     binary(std::filesystem::path path_input) {
         load(path_input);
     }
+    /** Initialise binary data from existing char vector. @note Same as using `.load()` later. */
     binary(std::vector<char>& vector_data, size_t start = 0, size_t end = -1) {
         load(vector_data, start, end);
     }
 
+    /** Changes the endianness of an integer depending on your system.
+     * @note This is compiler-defined, and you can check yours via `std::endian::native`,
+     * although this function should work regardless.
+    */
     template <std::integral T>
     T set_endian(T value, std::endian endian) {
         return (std::endian::native != endian)
@@ -90,12 +100,15 @@ public:
         return buffer;
     }
 
-    void move(size_t offset) {
+    /* Changes the position of the file "cursor" by an offset, positive or negative. */
+    void move(std::int64_t offset) {
         cursor += offset;
     }
-    void align(size_t bytes) {
+    /* Sets the "cursor" position to the next multiple of [input]. */
+    void align_by(size_t bytes) {
         cursor += bytes - ( cursor % bytes );
     }
+    /** Return size of binary data. @note Does not use `vector.size()`, for C++11. */
     size_t size() {
         return data.end() - data.begin();
     }

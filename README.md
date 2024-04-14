@@ -14,7 +14,7 @@ Although I don't expect this to grow massively popular or anything, I do aim to 
     - [`set_endian()`](#set_endian)
     - [`read()`](#read)
     - [`move()`](#move)
-    - [`align()`](#align)
+    - [`align_by()`](#align_by)
     - [`size()`](#size)
 
 ## Dependencies
@@ -248,11 +248,11 @@ std::cout << foo.cursor << "\n"; // 52;
 > 52
 ```
 
-### `align()`
+### `align_by()`
 - **Type** → Void Function
 - **Declaration**
 ```cpp
-void align(size_t bytes);
+void align_by(size_t bytes);
 ```
 - **Use** → Moves the cursor to the next multiple of whatever passed `bytes` value.
 
@@ -261,7 +261,7 @@ kojo::binary foo{ /* some data */ };
 std::cout << foo.cursor << "\n"; // 0
 foo.move(69);
 std::cout << foo.cursor << "\n"; // 69
-foo.align(4);
+foo.align_by(4);
 std::cout << foo.cursor << "\n"; // 72;
 ```
 ```
