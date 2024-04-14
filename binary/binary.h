@@ -1,11 +1,12 @@
-#pragma once
+#ifndef KOJO_BINARY_PLUS_PLUS
+#define KOJO_BINARY_PLUS_PLUS
 
 #include <cstring>
 #include <fstream>
 #include <stdexcept>
 #include <cstdint>      // C++11
+#include <vector>       // C++11
 #include <filesystem>   // C++17
-#include <vector>       // C++17 (size)
 #include <concepts>     // C++20
 #include <bit>          // C++23 (byteswap)
 
@@ -30,7 +31,7 @@ public:
     void load(std::vector<char>& vector_data, size_t start = 0, size_t end = -1) {
         if (end == -1) end = vector_data.size();
         data.clear();
-        for (int i = start; i < end; i++) {
+        for (int i = start; i < end + 1; i++) {
             data.push_back(vector_data[i]);
         }
     }
@@ -50,22 +51,27 @@ public:
             : value;
     }
 
+    /** Reads integer of select size from current position in file. */
     template <std::integral INTEGRAL>
-    INTEGRAL b_read(std::endian endian) {
+    INTEGRAL read(std::endian endian) {
         INTEGRAL buffer;
         std::memcpy(&buffer, &data[cursor], sizeof(buffer));
         buffer = set_endian(buffer, endian);
         cursor += sizeof(buffer);
         return buffer;
     }
+    /** Reads single char (byte) from current position in file. */
     template <std::same_as<char> CHAR>
-    CHAR b_read() {
+    CHAR read() {
         CHAR buffer = data[cursor++];
         return buffer;
     }
+    /**
+     * Reads string from current position in file.
+     * @note Size of 0 auto-reads until null byte/terminator.
+    */
     template <std::same_as<std::string> STRING>
-    // Size of 0 auto-reads until null byte.
-    STRING b_read(size_t size = 0) {
+    STRING read(size_t size = 0) {
         STRING buffer = "";
         if (size > 0) {
             for (int i = 0; i < size; i++) {
@@ -84,16 +90,14 @@ public:
         return buffer;
     }
 
-    void b_move(size_t size) {
-        cursor += size;
+    void move(size_t offset) {
+        cursor += offset;
     }
-    void b_align(size_t bytes) {
-        cursor--;
+    void align(size_t bytes) {
         cursor += bytes - ( cursor % bytes );
     }
-
-    size_t get_size() {
-        return data.size();
+    size_t size() {
+        return data.end() - data.begin();
     }
 
 private:
@@ -102,3 +106,5 @@ private:
 };
 
 }
+
+#endif // KOJO_BINARY_PLUS_PLUS
