@@ -3,6 +3,8 @@ This library for **C++** aims to make reading and writing binary data **quick 'n
 
 Although I don't expect this to grow massively popular or anything, I do aim to make this library as open-purposed as possible, as well as compliant to the consistencies of the C++ standard library. That way, it can have use in a wide variety of projects that do deal with binary data. For that reason as well, feedback is much appreciated.
 
+As this library is still in its early stages of development, a lot of the documentation is **subject to change**.
+
 ## Table of Contents
 - [Dependencies](#dependencies)
 - [Usage](#usage)
