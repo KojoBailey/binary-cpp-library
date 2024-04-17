@@ -100,6 +100,37 @@ public:
         return buffer;
     }
 
+    template <std::integral INTEGRAL>
+    void write(INTEGRAL value, std::endian endian) {
+        value = set_endian(value, endian);
+        data.resize(data.size() + sizeof(INTEGRAL));
+        std::memcpy(data.data() + cursor, &value, sizeof(INTEGRAL));
+        cursor += sizeof(INTEGRAL);
+    }
+    template <std::same_as<char> CHAR>
+    void write(CHAR value) {
+        data.resize(1);
+        std::memcpy(data.data() + cursor, &value, 1);
+        cursor++;
+    }
+    template <std::same_as<std::string> STRING>
+    void write(STRING value, size_t length = 0) {
+        bool padding = 1;
+        if (length == 0) {
+            length = value.size() + 1;
+            padding = 0;
+        }
+        data.resize(data.size() + length);
+        std::memcpy(data.data() + cursor, value.data(), length);
+        cursor += length;
+
+        char zero = 0;
+        for (size_t i = value.size() + !padding; i < length; i++) {
+            std::memcpy(data.data() + cursor, &zero, 1);
+            cursor++;
+        }
+    }
+
     /* Changes the position of the file "cursor" by an offset, positive or negative. */
     void move(std::int64_t offset) {
         cursor += offset;
@@ -113,7 +144,15 @@ public:
         return data.end() - data.begin();
     }
 
-private:
+
+    void vector_to_file(std::filesystem::path output_path) {
+        file_output.open(output_path);
+        for (char i : data) {
+            file_output << i;
+        }
+        file_output.close();
+    }
+
     std::ifstream file_input;
     std::ofstream file_output;
 };
