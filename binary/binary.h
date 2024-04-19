@@ -10,12 +10,14 @@
 #include <concepts>     // C++20
 #include <bit>          // C++23 (byteswap)
 
+#include <iostream>
+
 /** @note Not `KojoBailey` like on GitHub since that's a bit tedious. */
 namespace kojo {
 
 class binary {
 public:
-    std::vector<char> data; // Each char represents a byte.
+    std::vector<unsigned char> data; // Each char represents a byte.
     size_t cursor{0};       // The current position in the data.
 
     /* Load binary data from filepath. */
@@ -31,10 +33,10 @@ public:
         file_input.close();
     }
     /* Load binary data from an existing char vector. */
-    void load(std::vector<char>& vector_data, size_t start = 0, size_t end = -1) {
+    void load(std::vector<unsigned char>& vector_data, size_t start = 0, size_t end = -1) {
         if (end == -1) end = vector_data.size();
         data.clear();
-        for (int i = start; i < end + 1; i++) {
+        for (int i = start; i < end; i++) {
             data.push_back(vector_data[i]);
         }
     }
@@ -46,7 +48,7 @@ public:
         load(path_input);
     }
     /** Initialise binary data from existing char vector. @note Same as using `.load()` later. */
-    binary(std::vector<char>& vector_data, size_t start = 0, size_t end = -1) {
+    binary(std::vector<unsigned char>& vector_data, size_t start = 0, size_t end = -1) {
         load(vector_data, start, end);
     }
 
@@ -109,7 +111,7 @@ public:
     }
     template <std::same_as<char> CHAR>
     void write(CHAR value) {
-        data.resize(1);
+        data.resize(data.size() + 1);
         std::memcpy(data.data() + cursor, &value, 1);
         cursor++;
     }
@@ -130,6 +132,12 @@ public:
             cursor++;
         }
     }
+    template <std::same_as<std::vector<unsigned char>> VECTOR>
+    void write(VECTOR& value) {
+        data.resize(data.size() + value.size());
+        std::memcpy(data.data() + cursor, value.data(), value.size());
+        cursor += value.size();
+    }
 
     /* Changes the position of the file "cursor" by an offset, positive or negative. */
     void move(std::int64_t offset) {
@@ -146,7 +154,7 @@ public:
 
 
     void vector_to_file(std::filesystem::path output_path) {
-        file_output.open(output_path);
+        file_output.open(output_path, std::ios::binary);
         for (char i : data) {
             file_output << i;
         }
