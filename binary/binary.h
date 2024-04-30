@@ -17,8 +17,8 @@ namespace kojo {
 
 class binary {
 public:
-    std::vector<unsigned char> data; // Each char represents a byte.
-    size_t cursor{0};       // The current position in the data.
+    std::vector<unsigned char> data;    // Each char represents a byte.
+    size_t cursor{0};                   // The current position in the data.
 
     /* Load binary data from filepath. */
     void load(std::filesystem::path path_input) {
@@ -50,6 +50,11 @@ public:
     /** Initialise binary data from existing char vector. @note Same as using `.load()` later. */
     binary(std::vector<unsigned char>& vector_data, size_t start = 0, size_t end = -1) {
         load(vector_data, start, end);
+    }
+
+    void clear() {
+        data.clear();
+        cursor = 0;
     }
 
     /** Changes the endianness of an integer depending on your system.
@@ -145,7 +150,9 @@ public:
     }
     /* Sets the "cursor" position to the next multiple of [input]. */
     void align_by(size_t bytes) {
-        cursor += bytes - ( cursor % bytes );
+        cursor += bytes - ( (cursor - 1) % bytes ) - 1;
+        if (cursor > data.size())
+            data.resize(cursor);
     }
     /** Return size of binary data. @note Does not use `vector.size()`, for C++11. */
     size_t size() {
