@@ -51,6 +51,9 @@ public:
     binary(std::vector<unsigned char>& vector_data, size_t start = 0, size_t end = -1) {
         load(vector_data, start, end);
     }
+    binary(binary* binary_data) {
+        load(binary_data->data);
+    }
 
     void clear() {
         data.clear();
