@@ -163,7 +163,7 @@ public:
     }
 
 
-    void vector_to_file(std::filesystem::path output_path) {
+    void dump_file(std::filesystem::path output_path) {
         file_output.open(output_path, std::ios::binary);
         for (char i : data) {
             file_output << i;
