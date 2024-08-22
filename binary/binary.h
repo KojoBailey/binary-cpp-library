@@ -1,5 +1,4 @@
-#ifndef KOJO_BINARY_PLUS_PLUS
-#define KOJO_BINARY_PLUS_PLUS
+#pragma once
 
 #include <cstring>
 #include <fstream>
@@ -9,6 +8,20 @@
 #include <filesystem>   // C++17
 #include <concepts>     // C++20
 #include <bit>          // C++23 (byteswap)
+
+#ifdef USE_BINARY_TYPES
+    using u8  = std::uint8_t;
+    using u16 = std::uint16_t;
+    using u32 = std::uint32_t;
+    using u64 = std::uint64_t;
+    using i8  = std::int8_t;
+    using i16 = std::int16_t;
+    using i32 = std::int32_t;
+    using i64 = std::int64_t;
+    using std::string;
+    constexpr auto big_endian = std::endian::big;
+    constexpr auto little_endian = std::endian::little;
+#endif // USE_BINARY_TYPES
 
 /** @note Not `KojoBailey` like on GitHub since that's a bit tedious. */
 namespace kojo {
@@ -186,6 +199,4 @@ private:
     }
 };
 
-}
-
-#endif // KOJO_BINARY_PLUS_PLUS
+} // namespace
