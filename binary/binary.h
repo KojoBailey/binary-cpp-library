@@ -10,14 +10,12 @@
 #include <concepts>     // C++20
 #include <bit>          // C++23 (byteswap)
 
-#include <iostream>
-
 /** @note Not `KojoBailey` like on GitHub since that's a bit tedious. */
 namespace kojo {
 
 class binary {
 public:
-    std::vector<unsigned char> data;    // Each char represents a byte.
+    std::vector<std::uint8_t> storage;    // Each char represents a byte.
     size_t cursor{0};                   // The current position in the data.
 
     /* Load binary data from filepath. */
@@ -26,7 +24,7 @@ public:
         cursor = 0;
         
         // Read file to vector for faster access.
-        data.clear();
+        storage.clear();
         while (file_input.peek() != EOF) {
             storage.push_back(file_input.get());
         }
@@ -34,12 +32,16 @@ public:
         update_pointer();
     }
     /* Load binary data from an existing char vector. */
-    void load(std::vector<unsigned char>& vector_data, size_t start = 0, size_t end = -1) {
+    void load(std::vector<std::uint8_t>& vector_data, size_t start = 0, size_t end = -1) {
         if (end == -1) end = vector_data.size();
         storage.clear();
         for (int i = start; i < end; i++) {
             storage.push_back(vector_data[i]);
         }
+        update_pointer();
+    }
+    void load(std::uint8_t* pointer) {
+        data = pointer;
     }
 
     /* Default constructor. Does nothing. */
@@ -49,15 +51,18 @@ public:
         load(path_input);
     }
     /** Initialise binary data from existing char vector. @note Same as using `.load()` later. */
-    binary(std::vector<unsigned char>& vector_data, size_t start = 0, size_t end = -1) {
+    binary(std::vector<std::uint8_t>& vector_data, size_t start = 0, size_t end = -1) {
         load(vector_data, start, end);
     }
     binary(binary* binary_data) {
-        load(binary_data->data);
+        load(binary_data->storage);
+    }
+    binary(std::uint8_t* pointer) {
+        load(pointer);
     }
 
     void clear() {
-        data.clear();
+        storage.clear();
         cursor = 0;
     }
 
@@ -114,14 +119,14 @@ public:
     template <std::integral INTEGRAL>
     void write(INTEGRAL value, std::endian endian) {
         value = set_endian(value, endian);
-        data.resize(data.size() + sizeof(INTEGRAL));
-        std::memcpy(data.data() + cursor, &value, sizeof(INTEGRAL));
+        storage.resize(storage.size() + sizeof(INTEGRAL));
+        std::memcpy(data + cursor, &value, sizeof(INTEGRAL));
         cursor += sizeof(INTEGRAL);
     }
     template <std::same_as<char> CHAR>
     void write(CHAR value) {
-        data.resize(data.size() + 1);
-        std::memcpy(data.data() + cursor, &value, 1);
+        storage.resize(storage.size() + 1);
+        std::memcpy(data + cursor, &value, 1);
         cursor++;
     }
     template <std::same_as<std::string> STRING>
@@ -131,20 +136,20 @@ public:
             length = value.size() + 1;
             padding = 0;
         }
-        data.resize(data.size() + length);
-        std::memcpy(data.data() + cursor, value.data(), length);
+        storage.resize(storage.size() + length);
+        std::memcpy(data + cursor, value.data(), length);
         cursor += length;
 
         char zero = 0;
         for (size_t i = value.size() + !padding; i < length; i++) {
-            std::memcpy(data.data() + cursor, &zero, 1);
+            std::memcpy(data + cursor, &zero, 1);
             cursor++;
         }
     }
-    template <std::same_as<std::vector<unsigned char>> VECTOR>
+    template <std::same_as<std::vector<std::uint8_t>> VECTOR>
     void write(VECTOR& value) {
-        data.resize(data.size() + value.size());
-        std::memcpy(data.data() + cursor, value.data(), value.size());
+        storage.resize(storage.size() + value.size());
+        std::memcpy(data + cursor, value.data(), value.size());
         cursor += value.size();
     }
 
@@ -155,25 +160,32 @@ public:
     /* Sets the "cursor" position to the next multiple of [input]. */
     void align_by(size_t bytes) {
         cursor += bytes - ( (cursor - 1) % bytes ) - 1;
-        if (cursor > data.size())
-            data.resize(cursor);
+        if (cursor > storage.size())
+            storage.resize(cursor);
     }
     /** Return size of binary data. @note Does not use `vector.size()`, for C++11. */
     size_t size() {
-        return data.end() - data.begin();
+        return storage.end() - storage.begin();
     }
 
 
     void dump_file(std::filesystem::path output_path) {
         file_output.open(output_path, std::ios::binary);
-        for (char i : data) {
-            file_output << i;
+        for (std::uint8_t byte : storage) {
+            file_output << byte;
         }
         file_output.close();
     }
 
     std::ifstream file_input;
     std::ofstream file_output;
+
+private:
+    std::uint8_t* data;
+
+    void update_pointer() {
+        data = storage.data();
+    }
 };
 
 }
