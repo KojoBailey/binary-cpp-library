@@ -1,4 +1,6 @@
 # [Binary++](https://github.com/KojoBailey/binary-cpp-library)
+\[WARNING] This documentation is currently outdated and in need of updating. This warning will disappear once resolved.
+
 This library for **C++** aims to make reading and writing binary data **quick 'n' easy**, using my own experience as someone who frequently works with raw binary/hexadecimal data.
 
 Although I don't expect this to grow massively popular or anything, I do aim to make this library as open-purposed as possible, as well as compliant to the consistencies of the C++ standard library. That way, it can have use in a wide variety of projects that do deal with binary data. For that reason as well, feedback is much appreciated.
@@ -20,9 +22,9 @@ As this library is still in its early stages of development, a lot of the docume
     - [`size()`](#size)
 
 ## Dependencies
-I'm not one to do strenuous testing on various different platforms and compilers, can I can say that this library currently required the C++23 standard. This means using flags like `-std=c++23` when compiling, or setting the standard in whatever IDE or build system you use.
+I'm not one to do strenuous testing on various different platforms and compilers, but I can say that this library currently requires the C++23 standard. This means using flags like `-std=c++23` when compiling, or setting the standard in whatever IDE or build system you use.
 
-Here is the full list of header libraries used by this library, and the C++ standards they require.
+Here is the full list of includes used by this library, and the C++ standards they require.
 ```cpp
 #include <cstring>
 #include <fstream>
@@ -34,19 +36,19 @@ Here is the full list of header libraries used by this library, and the C++ stan
 #include <bit>          // C++23 (byteswap)
 ```
 
-In future, some code may *potentially* be replaced to support as far back as **C++17**. It's also *possible* to go back as far as C++11, although unlikely. However, that is not my current priority.
+In future, some code may *potentially* be replaced to support as far back as **C++11**, although it's not my current priority.
 
 ## Usage
 This entire library is in a simple, single header file, and if you add it to your library paths, you'll be able to get started with a simple:
 
 ```cpp
-#include <kojo/binary.h> // or something along those lines.
+#include <kojo/binary.hpp> // or something along those lines.
 ```
 
-The main **class** of this library is `binary`, which is under the **`kojo` namespace**, and can be initialised with either an `std::filesystem::path` or `std::vector<char>`. Alternatively, you can also use the `load()` function for both.
+The main **class** of this library is `binary`, which is under the **`kojo` namespace**, and can be initialised with a `std::filesystem::path`, `std::vector<char>`, `kojo::binary*`, or `void*`. Alternatively, you can also use the `load()` function for both.
 
 ```cpp
-#include <kojo/binary.h>
+#include <kojo/binary.hpp>
 
 using kojo::binary;
 
@@ -56,12 +58,18 @@ int main() {
     // Initialising
     binary init_from_file{"./example/file/path.bin"};
     binary init_from_vector{some_data};
+    binary init_from_object{&init_from_vector};
+    binary init_from_pointer{some_data.data()};
 
     // Using `load()`
     binary load_from_file;
     load_from_file.load("./example/file/path.bin");
     binary load_from_vector;
     load_from_vector.load(some_data);
+    binary load_from_object;
+    load_from_object.load(&init_from_vector);
+    binary load_from_pointer;
+    load_from_pointer.load(some_data.data());
 }
 ```
 
@@ -72,12 +80,14 @@ Here is a list of every publicly-accessible element for the `binary` class, with
 
 ### `binary()`
 - **Type** → Constructor
-- **Overloads** → 3
+- **Overloads** → 5
 - **Declarations**
 ```cpp
 binary();
 binary(std::filesystem::path path_input);
 binary(std::vector<char>& vector_data, size_t start = 0, size_t end = -1);
+binary(binary* binary_data);
+binary(void* pointer);
 ```
 - **Use** → Either initialises a `binary` object that is empty, or with either a file (via filepath) or binary data.
 
@@ -95,11 +105,18 @@ kojo::binary foo3{foo_path};
 std::vector<char> foo_vec = {'S', 'o', 'm', 'e', ' ', 'd', 'a', 't', 'a', '.'};
 kojo::binary foo4{foo_vec};
 kojo::binary foo5{foo_vec, 5, 8}; // Only contains {'d', 'a', 't', 'a'}
+
+// Initialise from binary object.
+kojo::binary foo6{&foo4};
+
+// Initialise from pointer.
+kojo::binary foo7{foo6.data};
 ```
 
 ### `data`
-- **Type** → `std::vector<char>`
-- **Use** → Stores binary data in a vector of chars, with each char representing **1 byte**.
+\[needs updating]
+- **Type** → `std::vector<std::uint8_t>`
+- **Use** → Stores binary data in a vector, with each item representing **1 byte**.
 
 ```cpp
 kojo::binary main_file{ /* some data */ };
@@ -128,11 +145,12 @@ std::cout << foo.cursor << "\n"; // 180
 
 ### `load()`
 - **Type** → Void Function
-- **Overloads** → 2
+- **Overloads** → 3
 - **Declarations**
 ```cpp
 load(std::filesystem::path path_input);
 load(std::vector<char>& vector_data, size_t start = 0, size_t end = -1);
+void load(void* pointer);
 ```
 - **Use** → The exact same as the class constructors, although without the empty overload. Loading over an object with existing data will clear and overwrite that object entirely.
 
