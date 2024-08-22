@@ -1,4 +1,6 @@
 # [Binary++](https://github.com/KojoBailey/binary-cpp-library)
+\[WARNING] This documentation is currently outdated and in need of updating. This warning will disappear once resolved.
+
 This library for **C++** aims to make reading and writing binary data **quick 'n' easy**, using my own experience as someone who frequently works with raw binary/hexadecimal data.
 
 Although I don't expect this to grow massively popular or anything, I do aim to make this library as open-purposed as possible, as well as compliant to the consistencies of the C++ standard library. That way, it can have use in a wide variety of projects that do deal with binary data. For that reason as well, feedback is much appreciated.
@@ -65,9 +67,9 @@ int main() {
     binary load_from_vector;
     load_from_vector.load(some_data);
     binary load_from_object;
-    load_from_object(&init_from_vector);
+    load_from_object.load(&init_from_vector);
     binary load_from_pointer;
-    load_from_pointer(some_data.data());
+    load_from_pointer.load(some_data.data());
 }
 ```
 
