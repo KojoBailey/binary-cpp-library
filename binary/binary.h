@@ -15,8 +15,8 @@ namespace kojo {
 
 class binary {
 public:
-    std::vector<std::uint8_t> storage;    // Each char represents a byte.
-    size_t cursor{0};                   // The current position in the data.
+    std::uint8_t* data;
+    size_t cursor{0};   // The current position in the data.
 
     /* Load binary data from filepath. */
     void load(std::filesystem::path path_input) {
@@ -168,7 +168,6 @@ public:
         return storage.end() - storage.begin();
     }
 
-
     void dump_file(std::filesystem::path output_path) {
         file_output.open(output_path, std::ios::binary);
         for (std::uint8_t byte : storage) {
@@ -177,11 +176,10 @@ public:
         file_output.close();
     }
 
+private:
+    std::vector<std::uint8_t> storage;  // Each char represents a byte.
     std::ifstream file_input;
     std::ofstream file_output;
-
-private:
-    std::uint8_t* data;
 
     void update_pointer() {
         data = storage.data();
