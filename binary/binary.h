@@ -1,46 +1,51 @@
 #pragma once
 
-#include <bit>
 #include <concepts>
 #include <cstdint>
-#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <string>
-#include <stdexcept>
 #include <vector>
 
 namespace kojo {
 
 class Binary {
 public:
-    std::vector<char> data;
+    std::uint8_t* data;
 
     void load(std::filesystem::path path_input) {
         file_input.open(path_input, std::ios::binary);
         position = 0;
         
         /* Read file to vector for faster access. */
-        data.clear();
+        storage.clear();
         while (file_input.peek() != EOF) {
-            data.push_back(file_input.get());
+            storage.push_back(file_input.get());
         }
         file_input.close();
+        update_pointer();
     }
-    void load(std::vector<char>& vector_data, size_t start = 0, size_t end = -1) {
+    void load(std::vector<std::uint8_t>& vector_data, size_t start = 0, size_t end = -1) {
         if (end == -1) end = vector_data.size();
-        data.clear();
+        storage.clear();
         for (int i = start; i < end; i++) {
-            data.push_back(vector_data[i]);
+            storage.push_back(vector_data[i]);
         }
+        update_pointer();
+    }
+    void load(std::uint8_t* data_start) {
+        data = data_start;
     }
 
     Binary() {};
     Binary(std::filesystem::path path_input) {
         load(path_input);
     }
-    Binary(std::vector<char>& vector_data, size_t start = 0, size_t end = -1) {
+    Binary(std::vector<std::uint8_t>& vector_data, size_t start = 0, size_t end = -1) {
         load(vector_data, start, end);
+    }
+    Binary(std::uint8_t* data_start) {
+        load(data_start);
     }
 
     template <std::integral T>
@@ -51,7 +56,7 @@ public:
     }
 
     template <std::integral INTEGRAL>
-    INTEGRAL b_read(std::endian endian) {
+    INTEGRAL read(std::endian endian) {
         INTEGRAL buffer;
         std::memcpy(&buffer, &data[position], sizeof(buffer));
         buffer = set_endian(buffer, endian);
@@ -59,13 +64,13 @@ public:
         return buffer;
     }
     template <std::same_as<char> CHAR>
-    CHAR b_read() {
+    CHAR read() {
         CHAR buffer = data[position++];
         return buffer;
     }
     template <std::same_as<std::string> STRING>
     // Size of 0 auto-reads until null byte.
-    STRING b_read(size_t size = 0) {
+    STRING read(size_t size = 0) {
         STRING buffer = "";
         if (size > 0) {
             for (int i = 0; i < size; i++) {
@@ -84,10 +89,10 @@ public:
         return buffer;
     }
 
-    void b_move(size_t size) {
+    void move(size_t size) {
         position += size;
     }
-    void b_align(size_t bytes) {
+    void align(size_t bytes) {
         position--;
         position += bytes - ( position % bytes );
     }
@@ -102,7 +107,12 @@ public:
 private:
     std::ifstream file_input;
     std::ofstream file_output;
+    std::vector<std::uint8_t> storage;
     size_t position = 0;
+
+    void update_pointer() {
+        data = storage.data();
+    }
 };
 
 }
