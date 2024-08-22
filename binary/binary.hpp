@@ -53,8 +53,8 @@ public:
         }
         update_pointer();
     }
-    void load(std::uint8_t* pointer) {
-        data = pointer;
+    void load(void* pointer) {
+        data = (std::uint8_t*)pointer;
     }
 
     /* Default constructor. Does nothing. */
@@ -70,7 +70,7 @@ public:
     binary(binary* binary_data) {
         load(binary_data->storage);
     }
-    binary(std::uint8_t* pointer) {
+    binary(void* pointer) {
         load(pointer);
     }
 
