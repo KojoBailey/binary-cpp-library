@@ -40,13 +40,13 @@ In future, some code may *potentially* be replaced to support as far back as **C
 This entire library is in a simple, single header file, and if you add it to your library paths, you'll be able to get started with a simple:
 
 ```cpp
-#include <kojo/binary.h> // or something along those lines.
+#include <kojo/binary.hpp> // or something along those lines.
 ```
 
 The main **class** of this library is `binary`, which is under the **`kojo` namespace**, and can be initialised with either an `std::filesystem::path` or `std::vector<char>`. Alternatively, you can also use the `load()` function for both.
 
 ```cpp
-#include <kojo/binary.h>
+#include <kojo/binary.hpp>
 
 using kojo::binary;
 
