@@ -60,7 +60,7 @@ public:
 
 class binary {
 public:
-    unsigned char* data;
+    ptr<unsigned char> data;
     size_t cursor{0};   // The current position in the data.
 
     /* Load binary data from filepath. */
@@ -85,7 +85,7 @@ public:
         }
         update_pointer();
     }
-    void load(ptr<char> pointer, size_t start, size_t end) {
+    void load(ptr<unsigned char> pointer, size_t start, size_t end) {
         if (end == -1) 
             data = (pointer + start).addr<unsigned char>();
     }
@@ -103,7 +103,7 @@ public:
     binary(binary* binary_data) {
         load(binary_data->storage);
     }
-    binary(ptr<char> pointer, size_t start = 0, size_t end = -1) {
+    binary(ptr<unsigned char> pointer, size_t start = 0, size_t end = -1) {
         load(pointer, start, end);
     }
 
@@ -127,7 +127,7 @@ public:
     template <std::integral INTEGRAL>
     INTEGRAL read(std::endian endian) {
         INTEGRAL buffer;
-        std::memcpy(&buffer, &data[cursor], sizeof(buffer));
+        std::memcpy(&buffer, (data + cursor).addr<char>(), sizeof(buffer));
         buffer = set_endian(buffer, endian);
         cursor += sizeof(buffer);
         return buffer;
@@ -135,7 +135,7 @@ public:
     /** Reads single char (byte) from current position in file. */
     template <std::same_as<char> CHAR>
     CHAR read() {
-        CHAR buffer = data[cursor++];
+        CHAR buffer = (data + cursor++).val<CHAR>();
         return buffer;
     }
     /**
@@ -147,14 +147,14 @@ public:
         STRING buffer = "";
         if (size > 0) {
             for (int i = 0; i < size; i++) {
-                if (data[cursor] != '\0') {
-                    buffer += data[cursor];
+                if ((data + cursor).val<char>() != '\0') {
+                    buffer += (data + cursor).val<char>();
                 }
                 cursor++;
             }
         } else {
-            for (int i = 0; data[cursor] != '\0'; i++) {
-                buffer += data[cursor];
+            for (int i = 0; (data + cursor).val<char>() != '\0'; i++) {
+                buffer += (data + cursor).val<char>();
                 cursor++;
             }
             cursor++;
@@ -166,13 +166,13 @@ public:
     void write(INTEGRAL value, std::endian endian) {
         value = set_endian(value, endian);
         storage.resize(storage.size() + sizeof(INTEGRAL));
-        std::memcpy(data + cursor, &value, sizeof(INTEGRAL));
+        std::memcpy((data + cursor).addr<char>(), &value, sizeof(INTEGRAL));
         cursor += sizeof(INTEGRAL);
     }
     template <std::same_as<char> CHAR>
     void write(CHAR value) {
         storage.resize(storage.size() + 1);
-        std::memcpy(data + cursor, &value, 1);
+        std::memcpy((data + cursor).addr<char>(), &value, 1);
         cursor++;
     }
     template <std::same_as<std::string> STRING>
@@ -183,19 +183,19 @@ public:
             padding = 0;
         }
         storage.resize(storage.size() + length);
-        std::memcpy(data + cursor, value.data(), length);
+        std::memcpy((data + cursor).addr<char>(), value.data(), length);
         cursor += length;
 
         char zero = 0;
         for (size_t i = value.size() + !padding; i < length; i++) {
-            std::memcpy(data + cursor, &zero, 1);
+            std::memcpy((data + cursor).addr<char>(), &zero, 1);
             cursor++;
         }
     }
     template <std::same_as<std::vector<unsigned char>> VECTOR>
     void write(VECTOR& value) {
         storage.resize(storage.size() + value.size());
-        std::memcpy(data + cursor, value.data(), value.size());
+        std::memcpy((data + cursor).addr<char>(), value.data(), value.size());
         cursor += value.size();
     }
 
