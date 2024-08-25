@@ -26,9 +26,41 @@
 /** @note Not `KojoBailey` like on GitHub since that's a bit tedious. */
 namespace kojo {
 
+template< class classT = void >
+class ptr {
+private:
+    const classT* address;
+
+public:
+    ptr() = default;
+    template<typename T> ptr(T* init) : address( (decltype(address))init ) {}
+
+    /* Get address as certain type. */
+    decltype(address) addr() { return address; } // char* is default type.
+    template<typename T> T* addr() { return (T*)address; }
+
+    /* Get dereferenced value as certain type. */
+    template<typename T> T val() { return *(T*)address; }
+
+    template<std::integral T> friend ptr operator+(ptr left, T right) {
+        return ptr((char*)left.addr() + right);
+    }
+
+    template<std::integral T> friend ptr operator+(T left, ptr right) {
+        return ptr((char*)right.addr() + left);
+    }
+
+    template<std::integral T> friend ptr operator-(ptr left, T right) {
+        return ptr((char*)left.addr() - left);
+    }
+    std::ptrdiff_t friend operator-(ptr left, ptr right) {
+        return left.addr() - right.addr();
+    }
+};
+
 class binary {
 public:
-    std::uint8_t* data;
+    unsigned char* data;
     size_t cursor{0};   // The current position in the data.
 
     /* Load binary data from filepath. */
@@ -45,7 +77,7 @@ public:
         update_pointer();
     }
     /* Load binary data from an existing char vector. */
-    void load(std::vector<std::uint8_t>& vector_data, size_t start = 0, size_t end = -1) {
+    void load(std::vector<unsigned char>& vector_data, size_t start = 0, size_t end = -1) {
         if (end == -1) end = vector_data.size();
         storage.clear();
         for (int i = start; i < end; i++) {
@@ -53,8 +85,9 @@ public:
         }
         update_pointer();
     }
-    void load(void* pointer) {
-        data = (std::uint8_t*)pointer;
+    void load(ptr<char> pointer, size_t start, size_t end) {
+        if (end == -1) 
+            data = (pointer + start).addr<unsigned char>();
     }
 
     /* Default constructor. Does nothing. */
@@ -64,14 +97,14 @@ public:
         load(path_input);
     }
     /** Initialise binary data from existing char vector. @note Same as using `.load()` later. */
-    binary(std::vector<std::uint8_t>& vector_data, size_t start = 0, size_t end = -1) {
+    binary(std::vector<unsigned char>& vector_data, size_t start = 0, size_t end = -1) {
         load(vector_data, start, end);
     }
     binary(binary* binary_data) {
         load(binary_data->storage);
     }
-    binary(void* pointer) {
-        load(pointer);
+    binary(ptr<char> pointer, size_t start = 0, size_t end = -1) {
+        load(pointer, start, end);
     }
 
     void clear() {
@@ -159,7 +192,7 @@ public:
             cursor++;
         }
     }
-    template <std::same_as<std::vector<std::uint8_t>> VECTOR>
+    template <std::same_as<std::vector<unsigned char>> VECTOR>
     void write(VECTOR& value) {
         storage.resize(storage.size() + value.size());
         std::memcpy(data + cursor, value.data(), value.size());
@@ -183,14 +216,14 @@ public:
 
     void dump_file(std::filesystem::path output_path) {
         file_output.open(output_path, std::ios::binary);
-        for (std::uint8_t byte : storage) {
+        for (unsigned char byte : storage) {
             file_output << byte;
         }
         file_output.close();
     }
 
 private:
-    std::vector<std::uint8_t> storage;  // Each char represents a byte.
+    std::vector<unsigned char> storage;  // Each char represents a byte.
     std::ifstream file_input;
     std::ofstream file_output;
 
