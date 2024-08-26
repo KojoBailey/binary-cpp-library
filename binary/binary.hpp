@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstring>
 #include <fstream>
 #include <cstdint>      // C++11
 #include <type_traits>  // C++11
@@ -95,6 +96,10 @@ public:
             update_pointer();
         }
     }
+    /* Load binary data from other binary object. */
+    void load(binary& binary_data) {
+        load(binary_data.data, 0, binary_data.size());
+    }
 
     /* Default constructor. Does nothing. */
     binary() {};
@@ -102,11 +107,11 @@ public:
     binary(std::string path_input) {
         load(path_input);
     }
-    binary(binary& binary_data) {
-        load(binary_data.data, 0, binary_data.size());
-    }
     binary(void* pointer, size_t start = 0, size_t end = -1) {
         load(pointer, start, end);
+    }
+    binary(binary& binary_data) {
+        load(binary_data.data, 0, binary_data.size());
     }
 
     void clear() {
