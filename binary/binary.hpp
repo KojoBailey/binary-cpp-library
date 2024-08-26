@@ -17,12 +17,20 @@
     using i32 = std::int32_t;
     using i64 = std::int64_t;
     using std::string;
-    constexpr auto big_endian = std::endian::big;
-    constexpr auto little_endian = std::endian::little;
 #endif // USE_BINARY_TYPES
 
 /** @note Not `KojoBailey` like on GitHub since that's a bit tedious. */
 namespace kojo {
+
+enum class endian {
+    big = 1234,
+    little = 4321
+};
+
+endian system_endian() {
+    std::uint32_t num = 0x01020304;
+    return (reinterpret_cast<char*>(&num)[0] == 1) ? endian::big : endian::little;
+}
 
 template< class classT = void >
 class ptr {
@@ -114,26 +122,27 @@ public:
      * although this function should work regardless.
     */
     template<typename T>
-    T set_endian(T value, std::endian endian) {
+    T set_endian(T value, endian endianness) {
         static_assert(std::is_integral<T>::value, "T must be an integral type.");
-        return (std::endian::native != endian)
+        return (system_endian() != endianness)
             ? byteswap(value)
             : value;
     }
 
     /** Reads integer of select size from current position in file. */
     template <typename INTEGRAL>
-    INTEGRAL read(std::endian endian) {
-        static_assert(std::is_integral<INTEGRAL>::value, "T must be an integral type.");
+    INTEGRAL read(endian endianness) {
+        static_assert(std::is_integral<INTEGRAL>::value, "INTEGRAL must be an integral type.");
         INTEGRAL buffer;
         std::memcpy(&buffer, &data[cursor], sizeof(buffer));
-        buffer = set_endian(buffer, endian);
+        buffer = set_endian(buffer, endianness);
         cursor += sizeof(buffer);
         return buffer;
     }
     /** Reads single char (byte) from current position in file. */
-    template <std::same_as<char> CHAR>
+    template <typename CHAR>
     CHAR read() {
+        static_assert(std::is_same<CHAR, char>::value, "CHAR must be of the char type.");
         CHAR buffer = data[cursor++];
         return buffer;
     }
@@ -141,8 +150,9 @@ public:
      * Reads string from current position in file.
      * @note Size of 0 auto-reads until null byte/terminator.
     */
-    template <std::same_as<std::string> STRING>
+    template <typename STRING>
     STRING read(size_t size = 0) {
+        static_assert(std::is_same<STRING, std::string>::value, "STRING must be of the std::string type.");
         STRING buffer = "";
         if (size > 0) {
             for (int i = 0; i < size; i++) {
@@ -160,21 +170,23 @@ public:
     }
 
     template <typename INTEGRAL>
-    void write(INTEGRAL value, std::endian endian) {
+    void write(INTEGRAL value, endian endianness) {
         static_assert(std::is_integral<INTEGRAL>::value, "INTEGRAL must be an integral type.");
-        value = set_endian(value, endian);
+        value = set_endian(value, endianness);
         storage.resize(storage.size() + sizeof(INTEGRAL));
         std::memcpy(&data[cursor], &value, sizeof(INTEGRAL));
         cursor += sizeof(INTEGRAL);
     }
-    template <std::same_as<char> CHAR>
+    template <typename CHAR>
     void write(CHAR value) {
+        static_assert(std::is_same<CHAR, char>::value, "CHAR must be of the char type.");
         storage.resize(storage.size() + 1);
         std::memcpy(&data[cursor], &value, 1);
         cursor++;
     }
-    template <std::same_as<std::string> STRING>
+    template <typename STRING>
     void write(STRING value, size_t length = 0) {
+        static_assert(std::is_same<STRING, std::string>::value, "STRING must be of the std::string type.");
         bool padding = 1;
         if (length == 0) {
             length = value.size() + 1;
@@ -190,8 +202,9 @@ public:
             cursor++;
         }
     }
-    template <std::same_as<std::vector<unsigned char>> VECTOR>
+    template <typename VECTOR>
     void write(VECTOR& value) {
+        static_assert(std::is_same<VECTOR, std::vector<unsigned char>>::value, "VECTOR must be of the std::vector<unsigned char> type.");
         storage.resize(storage.size() + value.size());
         std::memcpy(&data[cursor], value.data(), value.size());
         cursor += value.size();
