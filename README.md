@@ -1,4 +1,4 @@
-# [Binary++](https://github.com/KojoBailey/binary-cpp-library)
+# [binary++](https://github.com/KojoBailey/binary-cpp-library)
 \[WARNING] This documentation is currently outdated and in need of updating. This warning will disappear once resolved.
 
 This library for **C++11 and newer** assists reading from and writing to **binary data**, making use of my own experience as a reverse engineer.
