@@ -28,6 +28,7 @@ I'm not one to do strenuous testing on various different platforms and compilers
 
 Here is the full list of includes used by this library, and the C++ standards they require.
 ```cpp
+#include <cstring>
 #include <fstream>
 #include <cstdint>      // C++11
 #include <type_traits>  // C++11
