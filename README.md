@@ -1,11 +1,13 @@
 # [Binary++](https://github.com/KojoBailey/binary-cpp-library)
 \[WARNING] This documentation is currently outdated and in need of updating. This warning will disappear once resolved.
 
-This library for **C++** aims to make reading and writing binary data **quick 'n' easy**, using my own experience as someone who frequently works with raw binary/hexadecimal data.
+This library for **C++11 and newer** assists reading from and writing to **binary data**, making use of my own experience as a reverse engineer.
 
-Although I don't expect this to grow massively popular or anything, I do aim to make this library as open-purposed as possible, as well as compliant to the consistencies of the C++ standard library. That way, it can have use in a wide variety of projects that do deal with binary data. For that reason as well, feedback is much appreciated.
-
-As this library is still in its early stages of development, a lot of the documentation is **subject to change**.
+It aims to:
+- Support as far back as **C++11** for those still using older standards.
+- Be as **open-purposed** as possible for a range of use cases.
+- Mirror the **standard library's interface style**.
+- Recieve updates as necessary.
 
 ## Table of Contents
 - [Dependencies](#dependencies)
@@ -22,58 +24,47 @@ As this library is still in its early stages of development, a lot of the docume
     - [`size()`](#size)
 
 ## Dependencies
-I'm not one to do strenuous testing on various different platforms and compilers, but I can say that this library currently requires the C++23 standard. This means using flags like `-std=c++23` when compiling, or setting the standard in whatever IDE or build system you use.
+I'm not one to do strenuous testing on various different platforms and compilers, but this should work as far back as **C++11**. Earlier support will likely never be implemented by myself.
 
 Here is the full list of includes used by this library, and the C++ standards they require.
 ```cpp
-#include <cstring>
 #include <fstream>
-#include <stdexcept>
 #include <cstdint>      // C++11
+#include <type_traits>  // C++11
 #include <vector>       // C++11
-#include <filesystem>   // C++17
-#include <concepts>     // C++20
-#include <bit>          // C++23 (byteswap)
 ```
 
-In future, some code may *potentially* be replaced to support as far back as **C++11**, although it's not my current priority.
-
 ## Usage
-This entire library is in a simple, single header file, and if you add it to your library paths, you'll be able to get started with a simple:
+With a single header file at only ~9KB, it's very easy to start using this library. Support for build systems like **CMake** may be added in the future.
 
 ```cpp
 #include <kojo/binary.hpp> // or something along those lines.
 ```
 
-The main **class** of this library is `binary`, which is under the **`kojo` namespace**, and can be initialised with a `std::filesystem::path`, `std::vector<char>`, `kojo::binary*`, or `void*`. Alternatively, you can also use the `load()` function for both.
+A `binary` class is provided, under the `kojo` namespace, and can be initialised via a **file path** as an `std::string`, the **address** of some data, or **another `binary` object**.
+
+Alternatively, you can default initialise, and instead use `.load()` later on. Note that this will clear any data you may have had loaded into the object previously.
 
 ```cpp
 #include <kojo/binary.hpp>
-
-using kojo::binary;
 
 int main() {
     std::vector<char> some_data = {'S', 'o', 'm', 'e', ' ', 'd', 'a', 't', 'a', '.'};
 
     // Initialising
-    binary init_from_file{"./example/file/path.bin"};
-    binary init_from_vector{some_data};
-    binary init_from_object{&init_from_vector};
-    binary init_from_pointer{some_data.data()};
+    kojo::binary from_file{"./example/file/path.bin"};
+    kojo::binary from_address{some_data.data()};
+    kojo::binary from_object{from_file};
 
     // Using `load()`
-    binary load_from_file;
-    load_from_file.load("./example/file/path.bin");
-    binary load_from_vector;
-    load_from_vector.load(some_data);
-    binary load_from_object;
-    load_from_object.load(&init_from_vector);
-    binary load_from_pointer;
-    load_from_pointer.load(some_data.data());
+    kojo::binary from_file;
+    from_file.load("./example/file/path.bin");
+    kojo::binary from_address;
+    from_address.load(some_data.data());
+    kojo::binary load_from_object;
+    from_object.load(&from_file);
 }
 ```
-
-The `load()` function also allows you to overwrite existing data in a `binary` object, although more on that in the documentation below.
 
 ## Documentation
 Here is a list of every publicly-accessible element for the `binary` class, with examples:
