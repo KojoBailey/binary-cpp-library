@@ -4,9 +4,8 @@
 #include <fstream>
 #include <stdexcept>
 #include <cstdint>      // C++11
+#include <type_traits>  // C++11
 #include <vector>       // C++11
-#include <filesystem>   // C++17
-#include <concepts>     // C++20
 #include <bit>          // C++23 (byteswap)
 
 #ifdef USE_BINARY_TYPES
@@ -37,20 +36,24 @@ public:
 
     /* Get address as certain type. */
     decltype(address) addr() { return address; } // char* is default type.
-    template<typename T> T* addr() { return (T*)address; }
+    template<typename T = classT> T* addr() { return (T*)address; }
 
     /* Get dereferenced value as certain type. */
-    template<typename T> T val() { return *(T*)address; }
+    template<typename T = classT> T val() { return *(T*)address; }
 
-    template<std::integral T> friend ptr operator+(ptr left, T right) {
+    /* Get dereferenced value line an array. */
+    template<typename T = classT> T array(int offset) { return *((T*)address + offset); }
+
+    template<typename T> friend ptr operator+(ptr left, T right) {
+        static_assert(std::is_integral<T>::value, "T must be an integral type.");
         return ptr((char*)left.addr() + right);
     }
-
-    template<std::integral T> friend ptr operator+(T left, ptr right) {
+    template<typename T> friend ptr operator+(T left, ptr right) {
+        static_assert(std::is_integral<T>::value, "T must be an integral type.");
         return ptr((char*)right.addr() + left);
     }
-
-    template<std::integral T> friend ptr operator-(ptr left, T right) {
+    template<typename T> friend ptr operator-(ptr left, T right) {
+        static_assert(std::is_integral<T>::value, "T must be an integral type.");
         return ptr((char*)left.addr() - left);
     }
     std::ptrdiff_t friend operator-(ptr left, ptr right) {
@@ -60,50 +63,45 @@ public:
 
 class binary {
 public:
-    ptr<unsigned char> data;
+    unsigned char* data;
     size_t cursor{0};   // The current position in the data.
 
     /* Load binary data from filepath. */
-    void load(std::filesystem::path path_input) {
+    void load(std::string path_input) {
         file_input.open(path_input, std::ios::binary);
         cursor = 0;
         
         // Read file to vector for faster access.
         storage.clear();
-        while (file_input.peek() != EOF) {
+        while (!file_input.eof()) {
             storage.push_back(file_input.get());
         }
         file_input.close();
         update_pointer();
     }
-    /* Load binary data from an existing char vector. */
-    void load(std::vector<unsigned char>& vector_data, size_t start = 0, size_t end = -1) {
-        if (end == -1) end = vector_data.size();
-        storage.clear();
-        for (int i = start; i < end; i++) {
-            storage.push_back(vector_data[i]);
+    /* Load binary data from address. */
+    void load(void* pointer, size_t start = 0, size_t end = -1) {
+        if (end == -1) {
+            data = (decltype(data))pointer + start;
+        } else {
+            storage.clear();
+            for (int i = start; i < end; i++) {
+                storage.push_back(((decltype(data))pointer)[i]);
+            }
+            update_pointer();
         }
-        update_pointer();
-    }
-    void load(ptr<unsigned char> pointer, size_t start, size_t end) {
-        if (end == -1) 
-            data = (pointer + start).addr<unsigned char>();
     }
 
     /* Default constructor. Does nothing. */
     binary() {};
     /** Initialise binary data from filepath. @note Same as using `.load()` later. */
-    binary(std::filesystem::path path_input) {
+    binary(std::string path_input) {
         load(path_input);
     }
-    /** Initialise binary data from existing char vector. @note Same as using `.load()` later. */
-    binary(std::vector<unsigned char>& vector_data, size_t start = 0, size_t end = -1) {
-        load(vector_data, start, end);
-    }
     binary(binary* binary_data) {
-        load(binary_data->storage);
+        load(binary_data->data);
     }
-    binary(ptr<unsigned char> pointer, size_t start = 0, size_t end = -1) {
+    binary(void* pointer, size_t start = 0, size_t end = -1) {
         load(pointer, start, end);
     }
 
@@ -116,18 +114,20 @@ public:
      * @note This is compiler-defined, and you can check yours via `std::endian::native`,
      * although this function should work regardless.
     */
-    template <std::integral T>
+    template<typename T>
     T set_endian(T value, std::endian endian) {
+        static_assert(std::is_integral<T>::value, "T must be an integral type.");
         return (std::endian::native != endian)
             ? std::byteswap(value)
             : value;
     }
 
     /** Reads integer of select size from current position in file. */
-    template <std::integral INTEGRAL>
+    template <typename INTEGRAL>
     INTEGRAL read(std::endian endian) {
+        static_assert(std::is_integral<INTEGRAL>::value, "T must be an integral type.");
         INTEGRAL buffer;
-        std::memcpy(&buffer, (data + cursor).addr<char>(), sizeof(buffer));
+        std::memcpy(&buffer, &data[cursor], sizeof(buffer));
         buffer = set_endian(buffer, endian);
         cursor += sizeof(buffer);
         return buffer;
@@ -135,7 +135,7 @@ public:
     /** Reads single char (byte) from current position in file. */
     template <std::same_as<char> CHAR>
     CHAR read() {
-        CHAR buffer = (data + cursor++).val<CHAR>();
+        CHAR buffer = data[cursor++];
         return buffer;
     }
     /**
@@ -147,14 +147,14 @@ public:
         STRING buffer = "";
         if (size > 0) {
             for (int i = 0; i < size; i++) {
-                if ((data + cursor).val<char>() != '\0') {
-                    buffer += (data + cursor).val<char>();
+                if (data[cursor] != '\0') {
+                    buffer += data[cursor];
                 }
                 cursor++;
             }
         } else {
-            for (int i = 0; (data + cursor).val<char>() != '\0'; i++) {
-                buffer += (data + cursor).val<char>();
+            for (int i = 0; data[cursor] != '\0'; i++) {
+                buffer += data[cursor];
                 cursor++;
             }
             cursor++;
@@ -162,17 +162,18 @@ public:
         return buffer;
     }
 
-    template <std::integral INTEGRAL>
+    template <typename INTEGRAL>
     void write(INTEGRAL value, std::endian endian) {
+        static_assert(std::is_integral<INTEGRAL>::value, "INTEGRAL must be an integral type.");
         value = set_endian(value, endian);
         storage.resize(storage.size() + sizeof(INTEGRAL));
-        std::memcpy((data + cursor).addr<char>(), &value, sizeof(INTEGRAL));
+        std::memcpy(&data[cursor], &value, sizeof(INTEGRAL));
         cursor += sizeof(INTEGRAL);
     }
     template <std::same_as<char> CHAR>
     void write(CHAR value) {
         storage.resize(storage.size() + 1);
-        std::memcpy((data + cursor).addr<char>(), &value, 1);
+        std::memcpy(&data[cursor], &value, 1);
         cursor++;
     }
     template <std::same_as<std::string> STRING>
@@ -183,19 +184,19 @@ public:
             padding = 0;
         }
         storage.resize(storage.size() + length);
-        std::memcpy((data + cursor).addr<char>(), value.data(), length);
+        std::memcpy(&data[cursor], value.data(), length);
         cursor += length;
 
         char zero = 0;
         for (size_t i = value.size() + !padding; i < length; i++) {
-            std::memcpy((data + cursor).addr<char>(), &zero, 1);
+            std::memcpy(&data[cursor], &zero, 1);
             cursor++;
         }
     }
     template <std::same_as<std::vector<unsigned char>> VECTOR>
     void write(VECTOR& value) {
         storage.resize(storage.size() + value.size());
-        std::memcpy((data + cursor).addr<char>(), value.data(), value.size());
+        std::memcpy(&data[cursor], value.data(), value.size());
         cursor += value.size();
     }
 
@@ -214,7 +215,7 @@ public:
         return storage.end() - storage.begin();
     }
 
-    void dump_file(std::filesystem::path output_path) {
+    void dump_file(std::string output_path) {
         file_output.open(output_path, std::ios::binary);
         for (unsigned char byte : storage) {
             file_output << byte;

@@ -57,6 +57,7 @@
         "streambuf": "cpp",
         "typeinfo": "cpp",
         "variant": "cpp",
-        "iostream": "cpp"
+        "iostream": "cpp",
+        "print": "cpp"
     }
 }
