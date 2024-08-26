@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cstring>
+#include <cstring>      // std::memcpy
 #include <fstream>
 #include <cstdint>      // C++11
 #include <type_traits>  // C++11
