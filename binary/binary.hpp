@@ -1,8 +1,6 @@
 #pragma once
 
-#include <cstring>
 #include <fstream>
-#include <stdexcept>
 #include <cstdint>      // C++11
 #include <type_traits>  // C++11
 #include <vector>       // C++11
