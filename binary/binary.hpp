@@ -6,7 +6,6 @@
 #include <cstdint>      // C++11
 #include <type_traits>  // C++11
 #include <vector>       // C++11
-#include <bit>          // C++23 (byteswap)
 
 #ifdef USE_BINARY_TYPES
     using u8  = std::uint8_t;
@@ -69,10 +68,9 @@ public:
     /* Load binary data from filepath. */
     void load(std::string path_input) {
         file_input.open(path_input, std::ios::binary);
-        cursor = 0;
         
         // Read file to vector for faster access.
-        storage.clear();
+        clear();
         while (!file_input.eof()) {
             storage.push_back(file_input.get());
         }
@@ -84,7 +82,7 @@ public:
         if (end == -1) {
             data = (decltype(data))pointer + start;
         } else {
-            storage.clear();
+            clear();
             for (int i = start; i < end; i++) {
                 storage.push_back(((decltype(data))pointer)[i]);
             }
@@ -98,14 +96,15 @@ public:
     binary(std::string path_input) {
         load(path_input);
     }
-    binary(binary* binary_data) {
-        load(binary_data->data);
+    binary(binary& binary_data) {
+        load(binary_data.data, 0, binary_data.size());
     }
     binary(void* pointer, size_t start = 0, size_t end = -1) {
         load(pointer, start, end);
     }
 
     void clear() {
+        data = nullptr;
         storage.clear();
         cursor = 0;
     }
@@ -118,7 +117,7 @@ public:
     T set_endian(T value, std::endian endian) {
         static_assert(std::is_integral<T>::value, "T must be an integral type.");
         return (std::endian::native != endian)
-            ? std::byteswap(value)
+            ? byteswap(value)
             : value;
     }
 
@@ -147,15 +146,13 @@ public:
         STRING buffer = "";
         if (size > 0) {
             for (int i = 0; i < size; i++) {
-                if (data[cursor] != '\0') {
+                if (data[cursor] != '\0')
                     buffer += data[cursor];
-                }
                 cursor++;
             }
         } else {
             for (int i = 0; data[cursor] != '\0'; i++) {
-                buffer += data[cursor];
-                cursor++;
+                buffer += data[cursor++];
             }
             cursor++;
         }
@@ -207,7 +204,7 @@ public:
     /* Sets the "cursor" position to the next multiple of [input]. */
     void align_by(size_t bytes) {
         cursor += bytes - ( (cursor - 1) % bytes ) - 1;
-        if (cursor > storage.size())
+        if (cursor > storage.size() && storage.size() != 0)
             storage.resize(cursor);
     }
     /** Return size of binary data. @note Does not use `vector.size()`, for C++11. */
@@ -230,6 +227,22 @@ private:
 
     void update_pointer() {
         data = storage.data();
+    }
+
+    void charswap(unsigned char& a, unsigned char& b) {
+        a ^= b;
+        b ^= a;
+        a ^= b;
+    }
+
+    template<typename T> T byteswap(T t) {
+        static_assert(std::is_integral<T>::value, "T must be an integral type.");
+        unsigned char* first = (unsigned char*)&t;
+        unsigned char* last = first + sizeof(T) - 1;
+        while (first < last) {
+            charswap(*first++, *last--);
+        }
+        return t;
     }
 };
 
