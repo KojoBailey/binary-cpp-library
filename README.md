@@ -5,9 +5,9 @@ This library for **C++11 and newer** assists reading from and writing to **binar
 
 It aims to:
 - Support as far back as **C++11** for those still using older standards.
-- Be as **open-purposed** as possible for a range of use cases.
-- Mirror the **standard library's interface style**.
-- Recieve updates as necessary.
+- Be as **open-purposed** as possible for a wide range of use cases.
+- Mirror the **standard library's style** for interface.
+- Receive updates as necessary.
 
 ## Table of Contents
 - [Dependencies](#dependencies)
@@ -42,7 +42,7 @@ With a single header file at only ~9KB, it's very easy to start using this libra
 #include <kojo/binary.hpp> // or something along those lines.
 ```
 
-A `binary` class is provided, under the `kojo` namespace, and can be initialised via a **file path** as an `std::string`, the **address** of some data, or **another `binary` object**.
+A `binary` class is provided, under the `kojo` namespace, and can be initialised via a **file path** as an `std::string`, the **address** of the start of some data, or **another `binary` object**.
 
 Alternatively, you can default initialise, and instead use `.load()` later on. Note that this will clear any data you may have had loaded into the object previously.
 
@@ -70,231 +70,209 @@ int main() {
 ## Documentation
 Here is a list of every publicly-accessible element for the `binary` class, with examples:
 
-### `binary()`
-- **Type** → Constructor
-- **Overloads** → 5
-- **Declarations**
+### `binary{}`
+The **constructor**. Either initialises a `binary` object that is empty, or with either a file (via filepath) or binary data.
 ```cpp
 binary();
-binary(std::filesystem::path path_input);
-binary(std::vector<char>& vector_data, size_t start = 0, size_t end = -1);
-binary(binary* binary_data);
-binary(void* pointer);
+binary(std::string path_input, size_t start = 0, size_t size = -1);
+binary(void* pointer, size_t start = 0, size_t size = -1);
+binary(binary& binary_data, size_t start = 0, size_t size = -1);
 ```
-- **Use** → Either initialises a `binary` object that is empty, or with either a file (via filepath) or binary data.
 
 ```cpp
-// Initialise as empty.
-kojo::binary foo1;
+// Initialise as empty:
+kojo::binary ex_empty;
 
-// Initialise from filepath.
-kojo::binary foo2{"./example/file/path.bin"};
+// Initialise from filepath:
+kojo::binary ex_filepath{"./example/file/path.bin"};
 
-std::filesystem::path foo_path = "another/example/file/path.bin";
-kojo::binary foo3{foo_path};
+std::filesystem::path path = "another/example/file/path.bin";
+kojo::binary ex_fspath{path.string()};
 
-// Initialise from vector data.
-std::vector<char> foo_vec = {'S', 'o', 'm', 'e', ' ', 'd', 'a', 't', 'a', '.'};
-kojo::binary foo4{foo_vec};
-kojo::binary foo5{foo_vec, 5, 8}; // Only contains {'d', 'a', 't', 'a'}
+// Initialise from address:
+std::vector<char> vec = {'S', 'o', 'm', 'e', ' ', 'd', 'a', 't', 'a', '.'};
+kojo::binary ex_vector{vec.data(), 0, vec.size()};
+kojo::binary ex_vectorsect{vec.data(), 5, 4}; // Only contains "data"
 
-// Initialise from binary object.
-kojo::binary foo6{&foo4};
-
-// Initialise from pointer.
-kojo::binary foo7{foo6.data};
-```
-
-### `data`
-\[needs updating]
-- **Type** → `std::vector<std::uint8_t>`
-- **Use** → Stores binary data in a vector, with each item representing **1 byte**.
-
-```cpp
-kojo::binary main_file{ /* some data */ };
-// Create a smaller binary object using data from a bigger one.
-kojo::binary data_chunk{ main_file.data, 60, 244 };
-```
-
-### `cursor`
-- **Type** → `size_t`
-- **Default Value** → `0`
-- **Use** → The current **position** in the binary file, like an imaginary "cursor".
-
-```cpp
-kojo::binary foo{ /* some data */ };
-std::cout << foo.cursor << "\n"; // 0
-foo.cursor = 112;
-std::cout << foo.cursor << "\n"; // 112
-foo.cursor += 68;
-std::cout << foo.cursor << "\n"; // 180
-```
-```
-> 0
-> 112
-> 180
+// Initialise from another binary object:
+kojo::binary ex_object{ex_vector}; // Contains "Some data."
 ```
 
 ### `load()`
-- **Type** → Void Function
-- **Overloads** → 3
-- **Declarations**
+Same as the constructors, but can be used after initialisation, clearing all existing data.
 ```cpp
-load(std::filesystem::path path_input);
-load(std::vector<char>& vector_data, size_t start = 0, size_t end = -1);
-void load(void* pointer);
+void load(std::string path_input, size_t start = 0, size_t size = -1);
+void load(void* pointer, size_t start = 0, size_t size = -1);
+void load(binary& binary_data, size_t start = 0, size_t size = -1);
 ```
-- **Use** → The exact same as the class constructors, although without the empty overload. Loading over an object with existing data will clear and overwrite that object entirely.
-
 ```cpp
-// Load from filepath.
 kojo::binary foo;
+
+// Load from filepath:
 foo.load("./example/file/path.bin");
 
-// Load from vector data.
+std::filesystem::path path = "another/example/file/path.bin";
+foo.load(path.string());
+
+// Load from address:
 std::vector<char> vec = {'S', 'o', 'm', 'e', ' ', 'd', 'a', 't', 'a', '.'};
-kojo::binary foo2;
-foo2.load(vec);
-foo2.load(foo2.data, 5, 8); // Only contains {'d', 'a', 't', 'a'}
+foo.load(vec.data(), 0, vec.size());
+foo.load(vec.data(), 5, 4); // Only contains "data"
+
+// Load from another binary object:
+kojo::binary boo{vec.data(), 0, vec.size()};
+foo.load(boo); // Contains "Some data."
 ```
 
-### `set_endian()`
-- **Type** → Return Function
-- **Declaration**
+### `clear()`
+Clears all stored data and resets the position back to 0.
 ```cpp
-template <std::integral T>
-T set_endian(T value, std::endian endian);
+void clear();
 ```
-- **Use** → If the defined endianness of your system doesn't match the endian you input, the integer passed into the function will have its bytes swapped.
-
 ```cpp
-kojo::binary obj;
-std::cout << std::boolalpha << (std::endian::native == std::endian::little) << "\n"; // true
+kojo::binary writer;
+writer.write<std::string>("Gone... Reduced to atoms.");
+writer.clear();
+writer.write<std::string>("Out with the old...");
 
-std::uint32_t foo = 0x00050000;
-std::cout << std::hex << foo << "\n"; // 50000
-std::cout << std::dec << foo << "\n"; // 327680
-
-foo = obj.set_endian(foo, std::endian::big); // 0x00000500
-std::cout << std::hex << foo << "\n"; // 500
-std::cout << std::dec << foo << "\n"; // 1280
-```
-```
-> true
-> 50000
-> 327680
-> 500
-> 1280
+kojo::binary reader{writer};
+std::cout << reader.read<std::string>(); // "Out with the old..."
 ```
 
-### `read()`
-- **Type** → Return Function
-- **Overloads** → 3
-- **Declarations**
+### `data()`
+Returns a pointer to the data accessed by the object, whether that be internally or externally stored.
 ```cpp
-template <std::integral INTEGRAL>
-    INTEGRAL read(std::endian endian);
-template <std::same_as<char> CHAR>
-    CHAR read();
-template <std::same_as<std::string> STRING>
-    STRING read(size_t size = 0);
+unsigned char* data();
 ```
-- **Use** → Reads from the current cursor position in the data, accepting different specified types.
-
 ```cpp
-kojo::binary foo{ /* some data */ };
-std::cout << foo.cursor << "\n"; // 0
-auto some_big_u32 = foo.read<std::uint32_t>(std::endian::big);
-std::cout << foo.cursor << "\n"; // 4 (+4)
-auto some_char = foo.read<char>();
-std::cout << foo.cursor << "\n"; // 5 (+1)
-auto some_string = foo.read<std::string>(21);
-std::cout << foo.cursor << "\n"; // 26 (+21)
-```
-```
-> 0
-> 4
-> 5
-> 26
-```
-
-For the `std::string` overload, a `size` of `0` is given, the function will keep reading until a null byte is reached.
-```cpp
-std::vector<char> vec = { 'H', 'e', 'l', 'l', 'o', '\0', 'w', 'o', 'r', 'l', 'd', '!' };
-kojo::binary foo{vec};
-
-std::cout << foo.cursor << "\n"; // 0
-auto hello = foo.read<std::string>();
-std::cout << foo.cursor << "\n"; // 6 (not 5, due to null byte being skipped)
-std::cout << hello << "\n"; // "Hello"
-
-auto ub = foo.read<std::string>(); // WARNING: Undefined behaviour!
-std::cout << ub << " (for example)\n"; // Data has no further null-terminator, and thus what comes next is unknown/undefined.
-```
-```
-> 0
-> 6
-> Hello
-> world!nboard (for example)
-```
-
-### `move()`
-- **Type** → Void Function
-- **Declaration**
-```cpp
-void move(size_t offset);
-```
-- **Use** → Moves the current cursor position a specified number of bytes forwards or backwards.
-
-```cpp
-kojo::binary foo{ /* some data */ };
-std::cout << foo.cursor << "\n"; // 0
-foo.move(84);
-std::cout << foo.cursor << "\n"; // 84
-foo.move(-32);
-std::cout << foo.cursor << "\n"; // 52;
-```
-```
-> 0
-> 84
-> 52
-```
-
-### `align_by()`
-- **Type** → Void Function
-- **Declaration**
-```cpp
-void align_by(size_t bytes);
-```
-- **Use** → Moves the cursor to the next multiple of whatever passed `bytes` value.
-
-```cpp
-kojo::binary foo{ /* some data */ };
-std::cout << foo.cursor << "\n"; // 0
-foo.move(69);
-std::cout << foo.cursor << "\n"; // 69
-foo.align_by(4);
-std::cout << foo.cursor << "\n"; // 72;
-```
-```
-> 0
-> 69
-> 72
+kojo::binary foo;
+foo.write<char>('B');
+foo.write<std::string>("azinga!");
+std::cout << foo.data(); // "Bazinga!"
 ```
 
 ### `size()`
-- **Type** → Return Function
-- **Declaration**
+Returns the size of the internally-stored data if existing, or `-1` otherwise.
 ```cpp
 size_t size();
 ```
-- **Use** → Returns the size of the `data` vector, i.e. the object's data's size in bytes.
-
 ```cpp
-std::vector<char> vec = {'S', 'o', 'm', 'e', ' ', 'd', 'a', 't', 'a', '.'};
-kojo::binary foo{vec};
-std::cout << foo.size() << "\n"; // 11
+kojo::binary foo;
+foo.write<std::uint64_t>(23, kojo::endian::big);
+foo.write<std::uint32_t>(420, kojo::endian::big);
+std::cout << foo.size(); // 12
 ```
+
+### `set_endian()`
+Sets the endianness of an **integer** to big or little. Mostly exists for internal use.
+```cpp
+template <typename T> T set_endian(T value, kojo::endian endianness);
+    static_assert(std::is_integral<T>::value, "T must be an integral type.");
 ```
-> 11
+```cpp
+kojo::binary foo;
+std::uint32_t number = foo.set_endian(1, kojo::endian::big); // 00 00 00 01
+number = foo.set_endian(number, kojo::endian::little);       // 01 00 00 00
+```
+
+### `read()`
+Reads from data into a specified type, that being an integer, `char`, or `std::string`.
+```cpp
+template <typename T> T read(kojo::endian endianness);
+    static_assert(std::is_integral<T>::value, "T must be an integral type.");
+template <typename T> typename std::enable_if<std::is_same<T, char>::value, char>::type read();
+template <typename T> typename std::enable_if<std::is_same<T, std::string>::value, std::string>::type read(size_t size = 0);
+```
+```cpp
+std::vector<char> vec{17, 1,  0, 0, 'h', 'P', 'N', 'G', 'J', 'o', 'h', 'n', '\0', 'B'};
+kojo::binary foo{vec.data(), 0, vec.size()};
+
+std::cout << foo.read<std::uint32_t>(kojo::endian::little); // 273
+std::cout << foo.read<char>(); // 'h'
+std::cout << foo.read<std::string>(3); // "PNG"
+std::cout << foo.read<std::string>(); // "John"
+```
+
+### `write()`
+Writes specified data at the end of the internally-stored data. Cannot overwrite.
+```cpp
+template <typename T> void write(T value, endian endianness);
+    static_assert(std::is_integral<T>::value, "T must be an integral type.");
+template <typename T> void write(typename std::enable_if<std::is_same<T, char>::value, char>::type value);
+template <typename T> void write(typename std::enable_if<std::is_same<T, std::string>::value, std::string>::type value, size_t length = 0);
+template <typename T> void write(typename std::enable_if<std::is_same<T, std::vector<unsigned char>>::value, std::vector<unsigned char>>::type& value);
+```
+```cpp
+kojo::binary foo;
+foo.write<std::int64_t>(-281029, kojo::endian::big);
+foo.write<std::uint16_t>(934, kojo::endian::little);
+foo.write<char>('E');
+foo.write<std::string>("Die Speisekarte, bitte."); // Null-terminated.
+foo.write<std::string>("NUCC", 4); // Not null-terminated.
+std::vector<unsigned char> vec{'a', 'B', 'c', 'D'};
+foo.write<std::vector<unsigned char>>(vec);
+```
+
+### `get_pos()`
+Returns the current position in the data.
+```cpp
+size_t get_pos();
+```
+```cpp
+kojo::binary foo;
+std::cout << foo.get_pos(); // 0
+foo.write<std::uint32_t>(5, kojo::endian::big);
+std::cout << foo.get_pos(); // 4
+foo.write<std::string>("YouGotCAGEd");
+std::cout << foo.get_pos(); // 16
+```
+
+### `set_pos()`
+Sets the current position in the data.
+```cpp
+void set_pos(size_t pos);
+```
+```cpp
+kojo::binary foo;
+foo.write<std::string>("Goodbye JoJo!");
+foo.set_pos(0);
+std::cout << foo.read<std::string>(); // "Goodbye JoJo!"
+```
+
+### `change_pos()`
+Changes the position in data by an offset, positive or negative.
+```cpp
+void change_pos(std::int64_t offset);
+```
+```cpp
+kojo::binary foo;
+foo.write<std::string>("Goodbye JoJo!");
+foo.set_pos(0);
+foo.change_pos(8);
+std::cout << foo.read<std::string>(); // "JoJo!"
+```
+
+### `align_by()`
+Changes the position in data to the next multiple of a specified integer.
+```cpp
+void align_by(size_t bytes);
+```
+```cpp
+kojo::binary foo;
+foo.write<std::string>("ABCDEFGHGood grief.");
+foo.set_pos(0);
+foo.change_pos(5);
+foo.align_by(4);
+std::cout << foo.read<std::string>(); // "Good grief."
+```
+
+### `dump_file()`
+Outputs the data to a file at a specified path.
+```cpp
+void dump_file(std::string output_path);
+```
+```cpp
+kojo::binary foo;
+foo.write<std::string>("Coca Cola espuma");
+foo.dump_file("./some_path.bin");
 ```

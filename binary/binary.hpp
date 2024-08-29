@@ -71,19 +71,30 @@ public:
 
 class binary {
 public:
+    /** Initialise binary data from filepath. */
+    binary() {}
+    binary(std::string path_input, size_t start = 0, size_t size = -1) {
+        load(path_input, start, size);
+    }
+    binary(void* pointer, size_t start = 0, size_t size = -1) {
+        load(pointer, start, size);
+    }
+    binary(binary& binary_data, size_t start = 0, size_t size = -1) {
+        load(binary_data.data(), start, size);
+    }
+
     /* Load binary data from filepath. */
     void load(std::string path_input, size_t start = 0, size_t size = -1) {
         file_input.open(path_input, std::ios::binary);
-        
         // Read file to vector for faster access.
         clear();
+        file_input.seekg(start);
         if (size == -1) {
-            file_input.seekg(start);
-            for (int i = 0; i < size; i++) {
+            while (!file_input.eof()) {
                 internal_storage.push_back(file_input.get());
             }
         } else {
-            while (!file_input.eof()) {
+            for (int i = 0; i < size; i++) {
                 internal_storage.push_back(file_input.get());
             }
         }
@@ -106,21 +117,6 @@ public:
     void load(binary& binary_data, size_t start = 0, size_t size = -1) {
         if (size == -1) size = binary_data.size() - start;
         load(binary_data.data(), 0, binary_data.size());
-    }
-
-    /* Default constructor. Does nothing. */
-    binary() {
-        clear();
-    };
-    /** Initialise binary data from filepath. @note Same as using `.load()` later. */
-    binary(std::string path_input, size_t start = 0, size_t size = -1) {
-        load(path_input, start, size);
-    }
-    binary(void* pointer, size_t start = 0, size_t size = -1) {
-        load(pointer, start, size);
-    }
-    binary(binary& binary_data, size_t start = 0, size_t size = -1) {
-        load(binary_data.data(), start, size);
     }
 
     void clear() {
@@ -153,6 +149,11 @@ public:
         cursor += sizeof(buffer);
         return buffer;
     }
+    /** Reads single char (byte) from current position in file. */
+    template <typename T> typename std::enable_if<std::is_same<T, char>::value, char>::type read() {
+        T buffer = internal_address[cursor++];
+        return buffer;
+    }
     /**
      * Reads string from current position in file.
      * @note Size of 0 auto-reads until null byte/terminator.
@@ -167,23 +168,20 @@ public:
         }
         return buffer;
     }
-    /** Reads single char (byte) from current position in file. */
-    template <typename T> typename std::enable_if<std::is_same<T, char>::value, char>::type read() {
-        T buffer = internal_address[cursor++];
-        return buffer;
-    }
 
     template <typename T> void write(T value, endian endianness) {
         static_assert(std::is_integral<T>::value, "T must be an integral type.");
         value = set_endian(value, endianness);
-        internal_storage.resize(internal_storage.size() + sizeof(T));
+        cursor = internal_storage.size();
+        internal_storage.resize(cursor + sizeof(T));
         std::memcpy(&internal_storage[cursor], &value, sizeof(T));
         cursor += sizeof(T);
         update_pointer();
     }
     template <typename T> void write(typename std::enable_if<std::is_same<T, char>::value, char>::type value) {
         static_assert(std::is_same<T, char>::value, "T must be of the char type.");
-        internal_storage.resize(internal_storage.size() + 1);
+        cursor = internal_storage.size();
+        internal_storage.resize(cursor + 1);
         std::memcpy(&internal_storage[cursor], &value, 1);
         cursor++;
         update_pointer();
@@ -200,7 +198,8 @@ public:
         }
 
         // Write string to memory.
-        internal_storage.resize(internal_storage.size() + length + padding);
+        cursor = internal_storage.size();
+        internal_storage.resize(cursor + length + padding);
         std::memcpy(&internal_storage[cursor], value.data(), length);
         cursor += length;
 
@@ -212,10 +211,10 @@ public:
 
         update_pointer();
     }
-    template <typename T>
-    void write(typename std::enable_if<std::is_same<T, std::vector<unsigned char>>::value, std::vector<unsigned char>>::type& value) {
+    template <typename T> void write(typename std::enable_if<std::is_same<T, std::vector<unsigned char>>::value, std::vector<unsigned char>>::type& value) {
         static_assert(std::is_same<T, std::vector<unsigned char>>::value, "T must be of the std::vector<unsigned char> type.");
-        internal_storage.resize(internal_storage.size() + value.size());
+        cursor = internal_storage.size();
+        internal_storage.resize(cursor + value.size());
         std::memcpy(&internal_storage[cursor], value.data(), value.size());
         cursor += value.size();
         update_pointer();
