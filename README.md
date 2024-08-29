@@ -1,6 +1,4 @@
 # [binary++](https://github.com/KojoBailey/binary-cpp-library)
-\[WARNING] This documentation is currently outdated and in need of updating. This warning will disappear once resolved.
-
 This library for **C++11 and newer** assists reading from and writing to **binary data**, making use of my own experience as a reverse engineer.
 
 It aims to:
@@ -13,15 +11,19 @@ It aims to:
 - [Dependencies](#dependencies)
 - [Usage](#usage)
 - [Documentation](#documentation)
-    - [`binary()`](#binary-1)
-    - [`data`](#data)
-    - [`cursor`](#cursor)
+    - [`binary{}`](#binary-1)
     - [`load()`](#load)
+    - [`clear()`](#clear)
+    - [`data()`](#data)
+    - [`size()`](#size)
     - [`set_endian()`](#set_endian)
     - [`read()`](#read)
-    - [`move()`](#move)
+    - [`write()`](#write)
+    - [`get_pos()`](#get_pos)
+    - [`set_pos()`](#set_pos)
+    - [`change_pos()`](#change_pos)
     - [`align_by()`](#align_by)
-    - [`size()`](#size)
+    - [`dump_file()`](#dump_file)
 
 ## Dependencies
 I'm not one to do strenuous testing on various different platforms and compilers, but this should work as far back as **C++11**. Earlier support will likely never be implemented by myself.
