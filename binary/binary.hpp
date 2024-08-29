@@ -159,18 +159,12 @@ public:
     */
     template <typename T> typename std::enable_if<std::is_same<T, std::string>::value, std::string>::type read(size_t size = 0) {
         T buffer = (const char*)&internal_address[cursor];
-        cursor += buffer.size();
-        // if (size > 0) {
-        //     for (int i = 0; i < size; i++) {
-        //         if (internal_address[cursor] != '\0')
-        //             buffer += internal_address[cursor];
-        //         cursor++;
-        //     }
-        // } else {
-        //     for (int i = 0; internal_address[cursor] != '\0'; i++) {
-        //         buffer += internal_address[cursor++];
-        //     }
-        // }
+        if (size == 0) {
+            cursor += buffer.size() + 1; // Assume string is null terminated if size is 0.
+        } else {
+            buffer = buffer.substr(0, size);
+            cursor += size;
+        }
         return buffer;
     }
     /** Reads single char (byte) from current position in file. */
@@ -198,19 +192,24 @@ public:
             typename std::enable_if<std::is_same<T, std::string>::value, std::string>::type value, 
             size_t length = 0 ) {
         static_assert(std::is_same<T, std::string>::value, "T must be of the std::string type.");
-        bool padding = 1;
+        size_t padding{1};
         if (length == 0) {
             length = value.size();
+        } else {
+            padding = length - value.size();
         }
+
+        // Write string to memory.
         internal_storage.resize(internal_storage.size() + length + padding);
-        std::memcpy(&internal_storage[cursor], value.data(), length + padding);
+        std::memcpy(&internal_storage[cursor], value.data(), length);
         cursor += length;
 
-        // char zero = 0;
-        // for (size_t i = length; i < length; i++) {
-        //     std::memcpy(&internal_storage[cursor], &zero, 1);
-        //     cursor++;
-        // }
+        // Write any padding.
+        char zero{'\0'};
+        for (size_t i = 0; i < padding; i++) {
+            std::memcpy(&internal_storage[cursor++], &zero, 1);
+        }
+
         update_pointer();
     }
     template <typename T>
