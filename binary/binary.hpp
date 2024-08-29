@@ -6,6 +6,8 @@
 #include <type_traits>  // C++11
 #include <vector>       // C++11
 
+#include <iostream>
+
 #ifdef USE_BINARY_TYPES
     using u8  = std::uint8_t;
     using u16 = std::uint16_t;
@@ -22,8 +24,8 @@
 namespace kojo {
 
 enum class endian {
-    big = 1234,
-    little = 4321
+    big = 4321,
+    little = 1234
 };
 
 endian system_endian() {
@@ -69,63 +71,73 @@ public:
 
 class binary {
 public:
-    unsigned char* data;
-    size_t cursor{0};   // The current position in the data.
-
     /* Load binary data from filepath. */
-    void load(std::string path_input) {
+    void load(std::string path_input, size_t start = 0, size_t size = -1) {
         file_input.open(path_input, std::ios::binary);
         
         // Read file to vector for faster access.
         clear();
-        while (!file_input.eof()) {
-            storage.push_back(file_input.get());
+        if (size == -1) {
+            file_input.seekg(start);
+            for (int i = 0; i < size; i++) {
+                internal_storage.push_back(file_input.get());
+            }
+        } else {
+            while (!file_input.eof()) {
+                internal_storage.push_back(file_input.get());
+            }
         }
         file_input.close();
         update_pointer();
     }
     /* Load binary data from address. */
-    void load(void* pointer, size_t start = 0, size_t end = -1) {
-        if (end == -1) {
-            data = (decltype(data))pointer + start;
+    void load(void* pointer, size_t start = 0, size_t size = -1) {
+        if (size == -1) {
+            internal_address = (decltype(internal_address))pointer + start;
         } else {
             clear();
-            for (int i = start; i < end; i++) {
-                storage.push_back(((decltype(data))pointer)[i]);
+            for (int i = start; i < size + start; i++) {
+                internal_storage.push_back(((decltype(internal_address))pointer)[i]);
             }
             update_pointer();
         }
     }
     /* Load binary data from other binary object. */
-    void load(binary& binary_data) {
-        load(binary_data.data, 0, binary_data.size());
+    void load(binary& binary_data, size_t start = 0, size_t size = -1) {
+        if (size == -1) size = binary_data.size() - start;
+        load(binary_data.data(), 0, binary_data.size());
     }
 
     /* Default constructor. Does nothing. */
-    binary() {};
+    binary() {
+        clear();
+    };
     /** Initialise binary data from filepath. @note Same as using `.load()` later. */
-    binary(std::string path_input) {
-        load(path_input);
+    binary(std::string path_input, size_t start = 0, size_t size = -1) {
+        load(path_input, start, size);
     }
-    binary(void* pointer, size_t start = 0, size_t end = -1) {
-        load(pointer, start, end);
+    binary(void* pointer, size_t start = 0, size_t size = -1) {
+        load(pointer, start, size);
     }
-    binary(binary& binary_data) {
-        load(binary_data.data, 0, binary_data.size());
+    binary(binary& binary_data, size_t start = 0, size_t size = -1) {
+        load(binary_data.data(), start, size);
     }
 
     void clear() {
-        data = nullptr;
-        storage.clear();
+        internal_address = nullptr;
+        internal_storage.clear();
         cursor = 0;
     }
+    unsigned char* data() {
+        return internal_address;
+    }
+    /** Return size of binary data. */
+    size_t size() {
+        return (internal_storage.size() == 0) ? -1 : internal_storage.size();
+    }
 
-    /** Changes the endianness of an integer depending on your system.
-     * @note This is compiler-defined, and you can check yours via `std::endian::native`,
-     * although this function should work regardless.
-    */
-    template<typename T>
-    T set_endian(T value, endian endianness) {
+    /** Changes the endianness of an integer depending on your system. */
+    template <typename T> T set_endian(T value, endian endianness) {
         static_assert(std::is_integral<T>::value, "T must be an integral type.");
         return (system_endian() != endianness)
             ? byteswap(value)
@@ -133,116 +145,117 @@ public:
     }
 
     /** Reads integer of select size from current position in file. */
-    template <typename INTEGRAL>
-    INTEGRAL read(endian endianness) {
-        static_assert(std::is_integral<INTEGRAL>::value, "INTEGRAL must be an integral type.");
-        INTEGRAL buffer;
-        std::memcpy(&buffer, &data[cursor], sizeof(buffer));
+    template <typename T> T read(endian endianness) {
+        static_assert(std::is_integral<T>::value, "T must be an integral type.");
+        T buffer;
+        std::memcpy(&buffer, &internal_address[cursor], sizeof(buffer));
         buffer = set_endian(buffer, endianness);
         cursor += sizeof(buffer);
-        return buffer;
-    }
-    /** Reads single char (byte) from current position in file. */
-    template <typename CHAR>
-    CHAR read() {
-        static_assert(std::is_same<CHAR, char>::value, "CHAR must be of the char type.");
-        CHAR buffer = data[cursor++];
         return buffer;
     }
     /**
      * Reads string from current position in file.
      * @note Size of 0 auto-reads until null byte/terminator.
     */
-    template <typename STRING>
-    STRING read(size_t size = 0) {
-        static_assert(std::is_same<STRING, std::string>::value, "STRING must be of the std::string type.");
-        STRING buffer = "";
-        if (size > 0) {
-            for (int i = 0; i < size; i++) {
-                if (data[cursor] != '\0')
-                    buffer += data[cursor];
-                cursor++;
-            }
-        } else {
-            for (int i = 0; data[cursor] != '\0'; i++) {
-                buffer += data[cursor++];
-            }
-            cursor++;
-        }
+    template <typename T> typename std::enable_if<std::is_same<T, std::string>::value, std::string>::type read(size_t size = 0) {
+        T buffer = (const char*)&internal_address[cursor];
+        cursor += buffer.size();
+        // if (size > 0) {
+        //     for (int i = 0; i < size; i++) {
+        //         if (internal_address[cursor] != '\0')
+        //             buffer += internal_address[cursor];
+        //         cursor++;
+        //     }
+        // } else {
+        //     for (int i = 0; internal_address[cursor] != '\0'; i++) {
+        //         buffer += internal_address[cursor++];
+        //     }
+        // }
+        return buffer;
+    }
+    /** Reads single char (byte) from current position in file. */
+    template <typename T> typename std::enable_if<std::is_same<T, char>::value, char>::type read() {
+        T buffer = internal_address[cursor++];
         return buffer;
     }
 
-    template <typename INTEGRAL>
-    void write(INTEGRAL value, endian endianness) {
-        static_assert(std::is_integral<INTEGRAL>::value, "INTEGRAL must be an integral type.");
+    template <typename T> void write(T value, endian endianness) {
+        static_assert(std::is_integral<T>::value, "T must be an integral type.");
         value = set_endian(value, endianness);
-        storage.resize(storage.size() + sizeof(INTEGRAL));
-        std::memcpy(&data[cursor], &value, sizeof(INTEGRAL));
-        cursor += sizeof(INTEGRAL);
+        internal_storage.resize(internal_storage.size() + sizeof(T));
+        std::memcpy(&internal_storage[cursor], &value, sizeof(T));
+        cursor += sizeof(T);
+        update_pointer();
     }
-    template <typename CHAR>
-    void write(CHAR value) {
-        static_assert(std::is_same<CHAR, char>::value, "CHAR must be of the char type.");
-        storage.resize(storage.size() + 1);
-        std::memcpy(&data[cursor], &value, 1);
+    template <typename T> void write(typename std::enable_if<std::is_same<T, char>::value, char>::type value) {
+        static_assert(std::is_same<T, char>::value, "T must be of the char type.");
+        internal_storage.resize(internal_storage.size() + 1);
+        std::memcpy(&internal_storage[cursor], &value, 1);
         cursor++;
+        update_pointer();
     }
-    template <typename STRING>
-    void write(STRING value, size_t length = 0) {
-        static_assert(std::is_same<STRING, std::string>::value, "STRING must be of the std::string type.");
+    template <typename T> void write(
+            typename std::enable_if<std::is_same<T, std::string>::value, std::string>::type value, 
+            size_t length = 0 ) {
+        static_assert(std::is_same<T, std::string>::value, "T must be of the std::string type.");
         bool padding = 1;
         if (length == 0) {
-            length = value.size() + 1;
-            padding = 0;
+            length = value.size();
         }
-        storage.resize(storage.size() + length);
-        std::memcpy(&data[cursor], value.data(), length);
+        internal_storage.resize(internal_storage.size() + length + padding);
+        std::memcpy(&internal_storage[cursor], value.data(), length + padding);
         cursor += length;
 
-        char zero = 0;
-        for (size_t i = value.size() + !padding; i < length; i++) {
-            std::memcpy(&data[cursor], &zero, 1);
-            cursor++;
-        }
+        // char zero = 0;
+        // for (size_t i = length; i < length; i++) {
+        //     std::memcpy(&internal_storage[cursor], &zero, 1);
+        //     cursor++;
+        // }
+        update_pointer();
     }
-    template <typename VECTOR>
-    void write(VECTOR& value) {
-        static_assert(std::is_same<VECTOR, std::vector<unsigned char>>::value, "VECTOR must be of the std::vector<unsigned char> type.");
-        storage.resize(storage.size() + value.size());
-        std::memcpy(&data[cursor], value.data(), value.size());
+    template <typename T>
+    void write(typename std::enable_if<std::is_same<T, std::vector<unsigned char>>::value, std::vector<unsigned char>>::type& value) {
+        static_assert(std::is_same<T, std::vector<unsigned char>>::value, "T must be of the std::vector<unsigned char> type.");
+        internal_storage.resize(internal_storage.size() + value.size());
+        std::memcpy(&internal_storage[cursor], value.data(), value.size());
         cursor += value.size();
+        update_pointer();
     }
 
+    size_t get_pos() {
+        return cursor;
+    }
+    void set_pos(size_t pos) {
+        cursor = pos;
+    }
     /* Changes the position of the file "cursor" by an offset, positive or negative. */
-    void move(std::int64_t offset) {
+    void change_pos(std::int64_t offset) {
         cursor += offset;
     }
     /* Sets the "cursor" position to the next multiple of [input]. */
     void align_by(size_t bytes) {
         cursor += bytes - ( (cursor - 1) % bytes ) - 1;
-        if (cursor > storage.size() && storage.size() != 0)
-            storage.resize(cursor);
-    }
-    /** Return size of binary data. @note Does not use `vector.size()`, for C++11. */
-    size_t size() {
-        return storage.end() - storage.begin();
+        if (cursor > internal_storage.size() && internal_storage.size() != 0)
+            internal_storage.resize(cursor);
     }
 
     void dump_file(std::string output_path) {
         file_output.open(output_path, std::ios::binary);
-        for (unsigned char byte : storage) {
+        for (unsigned char byte : internal_storage) {
             file_output << byte;
         }
         file_output.close();
     }
 
 private:
-    std::vector<unsigned char> storage;  // Each char represents a byte.
+    unsigned char* internal_address;                // Address of stored or input data.
+    size_t cursor{0};                               // Current position in the data.
+    std::vector<unsigned char> internal_storage;    // Each char represents a byte.
     std::ifstream file_input;
     std::ofstream file_output;
 
     void update_pointer() {
-        data = storage.data();
+        internal_address = internal_storage.data();
     }
 
     void charswap(unsigned char& a, unsigned char& b) {
