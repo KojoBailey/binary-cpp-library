@@ -141,30 +141,31 @@ public:
     }
 
     /** Reads integer of select size from current position in file. */
-    template <typename T> T read(endian endianness) {
+    template <typename T> T read(endian endianness, size_t offset = 0) {
         static_assert(std::is_integral<T>::value, "T must be an integral type.");
         T buffer;
-        std::memcpy(&buffer, &internal_address[cursor], sizeof(buffer));
+        std::memcpy(&buffer, &internal_address[cursor + offset], sizeof(buffer));
         buffer = set_endian(buffer, endianness);
-        cursor += sizeof(buffer);
+        if (offset > 0) cursor += sizeof(buffer);
         return buffer;
     }
     /** Reads single char (byte) from current position in file. */
-    template <typename T> typename std::enable_if<std::is_same<T, char>::value, char>::type read() {
-        T buffer = internal_address[cursor++];
+    template <typename T> typename std::enable_if<std::is_same<T, char>::value, char>::type read(size_t offset = 0) {
+        T buffer = internal_address[cursor + offset];
+        if (offset > 0) cursor++;
         return buffer;
     }
     /**
      * Reads string from current position in file.
      * @note Size of 0 auto-reads until null byte/terminator.
     */
-    template <typename T> typename std::enable_if<std::is_same<T, std::string>::value, std::string>::type read(size_t size = 0) {
-        T buffer = (const char*)&internal_address[cursor];
-        if (size == 0) {
+    template <typename T> typename std::enable_if<std::is_same<T, std::string>::value, std::string>::type read(size_t size = 0, size_t offset = 0) {
+        T buffer = (const char*)&internal_address[cursor + offset];
+        if (size == 0 && offset > 0) {
             cursor += buffer.size() + 1; // Assume string is null terminated if size is 0.
         } else {
             buffer = buffer.substr(0, size);
-            cursor += size;
+            if (offset > 0) cursor += size;
         }
         return buffer;
     }
