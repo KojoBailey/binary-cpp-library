@@ -146,13 +146,13 @@ public:
         T buffer;
         std::memcpy(&buffer, &internal_address[cursor + offset], sizeof(buffer));
         buffer = set_endian(buffer, endianness);
-        if (offset > 0) cursor += sizeof(buffer);
+        if (offset == 0) cursor += sizeof(buffer);
         return buffer;
     }
     /** Reads single char (byte) from current position in file. */
     template <typename T> typename std::enable_if<std::is_same<T, char>::value, char>::type read(size_t offset = 0) {
         T buffer = internal_address[cursor + offset];
-        if (offset > 0) cursor++;
+        if (offset == 0) cursor++;
         return buffer;
     }
     /**
@@ -161,11 +161,11 @@ public:
     */
     template <typename T> typename std::enable_if<std::is_same<T, std::string>::value, std::string>::type read(size_t size = 0, size_t offset = 0) {
         T buffer = (const char*)&internal_address[cursor + offset];
-        if (size == 0 && offset > 0) {
+        if (size == 0 && offset == 0) {
             cursor += buffer.size() + 1; // Assume string is null terminated if size is 0.
         } else {
             buffer = buffer.substr(0, size);
-            if (offset > 0) cursor += size;
+            if (offset == 0) cursor += size;
         }
         return buffer;
     }
