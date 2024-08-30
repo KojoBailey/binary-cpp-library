@@ -180,10 +180,10 @@ number = foo.set_endian(number, kojo::endian::little);       // 01 00 00 00
 ### `read()`
 Reads from data into a specified type, that being an integer, `char`, or `std::string`.
 ```cpp
-template <typename T> T read(kojo::endian endianness);
+template <typename T> T read(kojo::endian endianness, size_t offset = 0);
     static_assert(std::is_integral<T>::value, "T must be an integral type.");
-template <typename T> typename std::enable_if<std::is_same<T, char>::value, char>::type read();
-template <typename T> typename std::enable_if<std::is_same<T, std::string>::value, std::string>::type read(size_t size = 0);
+template <typename T> typename std::enable_if<std::is_same<T, char>::value, char>::type read(size_t offset = 0);
+template <typename T> typename std::enable_if<std::is_same<T, std::string>::value, std::string>::type read(size_t size = 0, size_t offset = 0);
 ```
 ```cpp
 std::vector<char> vec{17, 1,  0, 0, 'h', 'P', 'N', 'G', 'J', 'o', 'h', 'n', '\0', 'B'};
