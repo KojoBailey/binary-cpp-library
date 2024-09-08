@@ -116,7 +116,7 @@ public:
     /* Load binary data from other binary object. */
     void load(binary& binary_data, size_t start = 0, size_t size = -1) {
         if (size == -1) size = binary_data.size() - start;
-        load(binary_data.data(), 0, binary_data.size());
+        load(binary_data.data(), start, size);
     }
 
     void clear() {
