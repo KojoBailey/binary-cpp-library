@@ -1,4 +1,5 @@
-#pragma once
+#ifndef KOJO_BINARY_LIB
+#define KOJO_BINARY_LIB
 
 #include <cstring>      // std::memcpy
 #include <fstream>
@@ -6,7 +7,8 @@
 #include <type_traits>  // C++11
 #include <vector>       // C++11
 
-#include <iostream>
+// #include <iostream>
+// #include <format>
 
 #ifdef USE_BINARY_TYPES
     using u8  = std::uint8_t;
@@ -28,7 +30,7 @@ enum class endian {
     little = 1234
 };
 
-endian system_endian() {
+inline endian system_endian() {
     std::uint32_t num = 0x01020304;
     return (reinterpret_cast<char*>(&num)[0] == 1) ? endian::big : endian::little;
 }
@@ -72,7 +74,7 @@ public:
 class binary {
 public:
     /** Initialise binary data from filepath. */
-    binary() {}
+    binary() = default;
     binary(std::string path_input, size_t start = 0, size_t size = -1) {
         load(path_input, start, size);
     }
@@ -83,15 +85,31 @@ public:
         load(binary_data.data(), start, size);
     }
 
+    binary(binary&& other) noexcept :
+        internal_address(other.internal_address),
+        internal_storage(std::move(other.internal_storage)),
+        cursor(other.cursor) {}
+
+    binary& operator=(binary&& other) noexcept {
+        if (this != &other) {
+            internal_address = other.internal_address;
+            internal_storage = std::move(other.internal_storage);
+            cursor = other.cursor;
+        }
+        return *this;
+    }
+
     /* Load binary data from filepath. */
     void load(std::string path_input, size_t start = 0, size_t size = -1) {
         file_input.open(path_input, std::ios::binary);
+        if (!file_input.is_open()) return;
         // Read file to vector for faster access.
         clear();
         file_input.seekg(start);
         if (size == -1) {
-            while (!file_input.eof()) {
-                internal_storage.push_back(file_input.get());
+            char buffer;
+            while (file_input.get(buffer)) {
+                internal_storage.push_back(buffer);
             }
         } else {
             for (int i = 0; i < size; i++) {
@@ -103,10 +121,10 @@ public:
     }
     /* Load binary data from address. */
     void load(void* pointer, size_t start = 0, size_t size = -1) {
+        clear();
         if (size == -1) {
             internal_address = (decltype(internal_address))pointer + start;
         } else {
-            clear();
             for (int i = start; i < size + start; i++) {
                 internal_storage.push_back(((decltype(internal_address))pointer)[i]);
             }
@@ -116,7 +134,7 @@ public:
     /* Load binary data from other binary object. */
     void load(binary& binary_data, size_t start = 0, size_t size = -1) {
         if (size == -1) size = binary_data.size() - start;
-        load(binary_data.data(), 0, binary_data.size());
+        load(binary_data.data(), start, size);
     }
 
     void clear() {
@@ -128,7 +146,7 @@ public:
         return internal_address;
     }
     /** Return size of binary data. */
-    size_t size() {
+    long long size() {
         return (internal_storage.size() == 0) ? -1 : internal_storage.size();
     }
 
@@ -220,9 +238,21 @@ public:
         cursor += value.size();
         update_pointer();
     }
+    template <typename T> void write(typename std::enable_if<std::is_same<T, binary>::value, binary>::type& value) {
+        static_assert(std::is_same<T, binary>::value, "T must be of the kojo::binary type.");
+        cursor = internal_storage.size();
+        if (value.size() == -1 || value.data() == nullptr) return;
+        internal_storage.resize(cursor + value.size());
+        std::memcpy(&internal_storage[cursor], value.data(), value.size());
+        cursor += value.size();
+        update_pointer();
+    }
 
     size_t get_pos() {
         return cursor;
+    }
+    bool at_end() {
+        return (get_pos() >= size());
     }
     void set_pos(size_t pos) {
         cursor = pos;
@@ -247,7 +277,7 @@ public:
     }
 
 private:
-    unsigned char* internal_address;                // Address of stored or input data.
+    unsigned char* internal_address{nullptr};       // Address of stored or input data.
     size_t cursor{0};                               // Current position in the data.
     std::vector<unsigned char> internal_storage;    // Each char represents a byte.
     std::ifstream file_input;
@@ -275,3 +305,5 @@ private:
 };
 
 } // namespace
+
+#endif // KOJO_BINARY_LIB
