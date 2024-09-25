@@ -143,6 +143,7 @@ public:
         cursor = 0;
     }
     unsigned char* data() {
+        update_pointer();
         return internal_address;
     }
     /** Return size of binary data. */
@@ -209,6 +210,7 @@ public:
             typename std::enable_if<std::is_same<T, std::string>::value, std::string>::type value, 
             size_t length = 0 ) {
         static_assert(std::is_same<T, std::string>::value, "T must be of the std::string type.");
+        if (value.size() == 0) return;
         size_t padding{1};
         if (length == 0) {
             length = value.size();
@@ -284,7 +286,8 @@ private:
     std::ofstream file_output;
 
     void update_pointer() {
-        internal_address = internal_storage.data();
+        if (internal_storage.data() != nullptr)
+            internal_address = internal_storage.data();
     }
 
     void charswap(unsigned char& a, unsigned char& b) {
