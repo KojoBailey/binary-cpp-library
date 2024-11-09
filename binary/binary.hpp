@@ -35,6 +35,22 @@ inline endian system_endian() {
     return (reinterpret_cast<char*>(&num)[0] == 1) ? endian::big : endian::little;
 }
 
+void charswap(unsigned char& a, unsigned char& b) {
+    a ^= b;
+    b ^= a;
+    a ^= b;
+}
+
+template<typename T> T byteswap(T t) {
+    static_assert(std::is_integral<T>::value, "T must be an integral type.");
+    unsigned char* first = (unsigned char*)&t;
+    unsigned char* last = first + sizeof(T) - 1;
+    while (first < last) {
+        charswap(*first++, *last--);
+    }
+    return t;
+}
+
 template< class classT = void >
 class ptr {
 private:
