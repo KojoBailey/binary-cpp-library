@@ -35,7 +35,7 @@ inline endian system_endian() {
     return (reinterpret_cast<char*>(&num)[0] == 1) ? endian::big : endian::little;
 }
 
-void charswap(unsigned char& a, unsigned char& b) {
+inline void charswap(unsigned char& a, unsigned char& b) {
     a ^= b;
     b ^= a;
     a ^= b;
