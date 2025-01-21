@@ -1,11 +1,13 @@
 #ifndef KOJO_BINARY_LIB
 #define KOJO_BINARY_LIB
 
+#include <bit>
 #include <cstring>      // std::memcpy
 #include <fstream>
-#include <cstdint>      // C++11
-#include <type_traits>  // C++11
-#include <vector>       // C++11
+#include <cstdint>
+#include <string_view>
+#include <type_traits>
+#include <vector>
 
 // #include <iostream>
 // #include <format>
@@ -25,14 +27,9 @@
 /** @note Not `KojoBailey` like on GitHub since that's a bit tedious. */
 namespace kojo {
 
-enum class endian {
-    big = 4321,
-    little = 1234
-};
-
-inline endian system_endian() {
+inline std::endian system_endian() {
     std::uint32_t num = 0x01020304;
-    return (reinterpret_cast<char*>(&num)[0] == 1) ? endian::big : endian::little;
+    return (reinterpret_cast<char*>(&num)[0] == 1) ? std::endian::big : std::endian::little;
 }
 
 inline void charswap(unsigned char& a, unsigned char& b) {
@@ -50,42 +47,6 @@ template<typename T> T byteswap(T t) {
     }
     return t;
 }
-
-template< class classT = void >
-class ptr {
-private:
-    const classT* address;
-
-public:
-    ptr() = default;
-    template<typename T> ptr(T* init) : address( (decltype(address))init ) {}
-
-    /* Get address as certain type. */
-    decltype(address) addr() { return address; } // char* is default type.
-    template<typename T = classT> T* addr() { return (T*)address; }
-
-    /* Get dereferenced value as certain type. */
-    template<typename T = classT> T val() { return *(T*)address; }
-
-    /* Get dereferenced value line an array. */
-    template<typename T = classT> T array(int offset) { return *((T*)address + offset); }
-
-    template<typename T> friend ptr operator+(ptr left, T right) {
-        static_assert(std::is_integral<T>::value, "T must be an integral type.");
-        return ptr((char*)left.addr() + right);
-    }
-    template<typename T> friend ptr operator+(T left, ptr right) {
-        static_assert(std::is_integral<T>::value, "T must be an integral type.");
-        return ptr((char*)right.addr() + left);
-    }
-    template<typename T> friend ptr operator-(ptr left, T right) {
-        static_assert(std::is_integral<T>::value, "T must be an integral type.");
-        return ptr((char*)left.addr() - left);
-    }
-    std::ptrdiff_t friend operator-(ptr left, ptr right) {
-        return left.addr() - right.addr();
-    }
-};
 
 class binary {
 public:
@@ -128,6 +89,7 @@ public:
                 internal_storage.push_back(buffer);
             }
         } else {
+            internal_storage.reserve(size);
             for (int i = 0; i < size; i++) {
                 internal_storage.push_back(file_input.get());
             }
@@ -141,6 +103,7 @@ public:
         if (size == -1) {
             internal_address = (decltype(internal_address))pointer + start;
         } else {
+            internal_storage.reserve(size);
             for (int i = start; i < size + start; i++) {
                 internal_storage.push_back(((decltype(internal_address))pointer)[i]);
             }
@@ -168,7 +131,7 @@ public:
     }
 
     /** Changes the endianness of an integer depending on your system. */
-    template <typename T> T set_endian(T value, endian endianness) {
+    template <typename T> T set_endian(T value, std::endian endianness) {
         static_assert(std::is_integral<T>::value, "T must be an integral type.");
         return (system_endian() != endianness)
             ? byteswap(value)
@@ -176,7 +139,7 @@ public:
     }
 
     /** Reads integer of select size from current position in file. */
-    template <typename T> T read(endian endianness, size_t offset = 0) {
+    template <typename T> T read(std::endian endianness, size_t offset = 0) {
         static_assert(std::is_integral<T>::value, "T must be an integral type.");
         T buffer;
         std::memcpy(&buffer, &internal_address[cursor + offset], sizeof(buffer));
@@ -205,8 +168,7 @@ public:
         return buffer;
     }
 
-    template <typename T> void write(T value, endian endianness) {
-        static_assert(std::is_integral<T>::value, "T must be an integral type.");
+    template <std::integral T> void write(T value, std::endian endianness) {
         value = set_endian(value, endianness);
         cursor = internal_storage.size();
         internal_storage.resize(cursor + sizeof(T));
@@ -214,18 +176,14 @@ public:
         cursor += sizeof(T);
         update_pointer();
     }
-    template <typename T> void write(typename std::enable_if<std::is_same<T, char>::value, char>::type value) {
-        static_assert(std::is_same<T, char>::value, "T must be of the char type.");
+    template <std::same_as<char> T> void write(const char& value) {
         cursor = internal_storage.size();
         internal_storage.resize(cursor + 1);
         std::memcpy(&internal_storage[cursor], &value, 1);
         cursor++;
         update_pointer();
     }
-    template <typename T> void write(
-            typename std::enable_if<std::is_same<T, std::string>::value, std::string>::type value, 
-            size_t length = 0 ) {
-        static_assert(std::is_same<T, std::string>::value, "T must be of the std::string type.");
+    template <std::same_as<std::string>> void write(std::string_view value, size_t length = 0 ) {
         if (value.size() == 0) return;
         size_t padding{1};
         if (length == 0) {
@@ -248,16 +206,14 @@ public:
 
         update_pointer();
     }
-    template <typename T> void write(typename std::enable_if<std::is_same<T, std::vector<unsigned char>>::value, std::vector<unsigned char>>::type& value) {
-        static_assert(std::is_same<T, std::vector<unsigned char>>::value, "T must be of the std::vector<unsigned char> type.");
+    template <std::same_as<std::vector<unsigned char>>> void write(const std::vector<unsigned char>& value) {
         cursor = internal_storage.size();
         internal_storage.resize(cursor + value.size());
         std::memcpy(&internal_storage[cursor], value.data(), value.size());
         cursor += value.size();
         update_pointer();
     }
-    template <typename T> void write(typename std::enable_if<std::is_same<T, binary>::value, binary>::type& value) {
-        static_assert(std::is_same<T, binary>::value, "T must be of the kojo::binary type.");
+    template <std::same_as<binary>> void write(binary& value) {
         cursor = internal_storage.size();
         if (value.size() == -1 || value.data() == nullptr) return;
         internal_storage.resize(cursor + value.size());
@@ -304,22 +260,6 @@ private:
     void update_pointer() {
         if (internal_storage.data() != nullptr)
             internal_address = internal_storage.data();
-    }
-
-    void charswap(unsigned char& a, unsigned char& b) {
-        a ^= b;
-        b ^= a;
-        a ^= b;
-    }
-
-    template<typename T> T byteswap(T t) {
-        static_assert(std::is_integral<T>::value, "T must be an integral type.");
-        unsigned char* first = (unsigned char*)&t;
-        unsigned char* last = first + sizeof(T) - 1;
-        while (first < last) {
-            charswap(*first++, *last--);
-        }
-        return t;
     }
 };
 

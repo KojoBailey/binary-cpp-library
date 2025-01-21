@@ -1,8 +1,8 @@
 # [binary++](https://github.com/KojoBailey/binary-cpp-library)
-This library for **C++11 and newer** assists reading from and writing to **binary data**, making use of my own experience as a reverse engineer.
+This library for **C++20 and newer** assists reading from and writing to **binary data**, making use of my own experience as a reverse engineer.
 
 It aims to:
-- Support as far back as **C++11** for those still using older standards.
+- Make use of modern C++ features where **useful** (i.e. `std::endian` and co.).
 - Be as **open-purposed** as possible for a wide range of use cases.
 - Mirror the **standard library's style** for interface.
 - Receive updates as necessary.
@@ -26,19 +26,21 @@ It aims to:
     - [`dump_file()`](#dump_file)
 
 ## Dependencies
-I'm not one to do strenuous testing on various different platforms and compilers, but this should work as far back as **C++11**. Earlier support will likely never be implemented by myself.
-
-Here is the full list of includes used by this library, and the C++ standards they require.
+Here is the full list of includes used by this library:
 ```cpp
-#include <cstring>
+#include <bit>
+#include <cstring>    
 #include <fstream>
-#include <cstdint>      // C++11
-#include <type_traits>  // C++11
-#include <vector>       // C++11
+#include <cstdint>
+#include <string_view>
+#include <type_traits>
+#include <vector>
 ```
 
+Otherwise, no external dependencies are used.
+
 ## Usage
-With a single header file at only ~9KB, it's very easy to start using this library. Support for build systems like **CMake** may be added in the future.
+With a single header file at only ~10KB, it's very easy to start using this library. Support for build systems like **CMake** may be added in the future.
 
 ```cpp
 #include <kojo/binary.hpp> // or something along those lines.
@@ -160,27 +162,27 @@ size_t size();
 ```
 ```cpp
 kojo::binary foo;
-foo.write<std::uint64_t>(23, kojo::endian::big);
-foo.write<std::uint32_t>(420, kojo::endian::big);
+foo.write<std::uint64_t>(23, std::endian::big);
+foo.write<std::uint32_t>(420, std::endian::big);
 std::cout << foo.size(); // 12
 ```
 
 ### `set_endian()`
 Sets the endianness of an **integer** to big or little. Mostly exists for internal use.
 ```cpp
-template <typename T> T set_endian(T value, kojo::endian endianness);
+template <typename T> T set_endian(T value, std::endian endianness);
     static_assert(std::is_integral<T>::value, "T must be an integral type.");
 ```
 ```cpp
 kojo::binary foo;
-std::uint32_t number = foo.set_endian(1, kojo::endian::big); // 00 00 00 01
-number = foo.set_endian(number, kojo::endian::little);       // 01 00 00 00
+std::uint32_t number = foo.set_endian(1, std::endian::big); // 00 00 00 01
+number = foo.set_endian(number, std::endian::little);       // 01 00 00 00
 ```
 
 ### `read()`
 Reads from data into a specified type, that being an integer, `char`, or `std::string`.
 ```cpp
-template <typename T> T read(kojo::endian endianness, size_t offset = 0);
+template <typename T> T read(std::endian endianness, size_t offset = 0);
     static_assert(std::is_integral<T>::value, "T must be an integral type.");
 template <typename T> typename std::enable_if<std::is_same<T, char>::value, char>::type read(size_t offset = 0);
 template <typename T> typename std::enable_if<std::is_same<T, std::string>::value, std::string>::type read(size_t size = 0, size_t offset = 0);
@@ -189,7 +191,7 @@ template <typename T> typename std::enable_if<std::is_same<T, std::string>::valu
 std::vector<char> vec{17, 1,  0, 0, 'h', 'P', 'N', 'G', 'J', 'o', 'h', 'n', '\0', 'B'};
 kojo::binary foo{vec.data(), 0, vec.size()};
 
-std::cout << foo.read<std::uint32_t>(kojo::endian::little); // 273
+std::cout << foo.read<std::uint32_t>(std::endian::little); // 273
 std::cout << foo.read<char>(); // 'h'
 std::cout << foo.read<std::string>(3); // "PNG"
 std::cout << foo.read<std::string>(); // "John"
@@ -206,8 +208,8 @@ template <typename T> void write(typename std::enable_if<std::is_same<T, std::ve
 ```
 ```cpp
 kojo::binary foo;
-foo.write<std::int64_t>(-281029, kojo::endian::big);
-foo.write<std::uint16_t>(934, kojo::endian::little);
+foo.write<std::int64_t>(-281029, std::endian::big);
+foo.write<std::uint16_t>(934, std::endian::little);
 foo.write<char>('E');
 foo.write<std::string>("Die Speisekarte, bitte."); // Null-terminated.
 foo.write<std::string>("NUCC", 4); // Not null-terminated.
@@ -223,7 +225,7 @@ size_t get_pos();
 ```cpp
 kojo::binary foo;
 std::cout << foo.get_pos(); // 0
-foo.write<std::uint32_t>(5, kojo::endian::big);
+foo.write<std::uint32_t>(5, std::endian::big);
 std::cout << foo.get_pos(); // 4
 foo.write<std::string>("YouGotCAGEd");
 std::cout << foo.get_pos(); // 16

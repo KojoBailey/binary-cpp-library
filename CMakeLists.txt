@@ -8,4 +8,4 @@ add_library(binary-cpp-library INTERFACE)
 # Include header files
 target_include_directories(binary-cpp-library INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-target_compile_features(binary-cpp-library INTERFACE cxx_std_11)
+set_target_properties(binary-cpp-library PROPERTIES CXX_STANDARD 23)
