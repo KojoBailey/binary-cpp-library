@@ -182,39 +182,39 @@ number = foo.set_endian(number, std::endian::little);       // 01 00 00 00
 ### `read()`
 Reads from data into a specified type, that being an integer, `char`, or `std::string`.
 ```cpp
-template <typename T> T read(std::endian endianness, size_t offset = 0);
+template <typename T> T read_int(std::endian endianness, size_t offset = 0);
     static_assert(std::is_integral<T>::value, "T must be an integral type.");
-template <typename T> typename std::enable_if<std::is_same<T, char>::value, char>::type read(size_t offset = 0);
-template <typename T> typename std::enable_if<std::is_same<T, std::string>::value, std::string>::type read(size_t size = 0, size_t offset = 0);
+char read_char(size_t offset = 0);
+std::string read_str(size_t size = 0, size_t offset = 0);
 ```
 ```cpp
 std::vector<char> vec{17, 1,  0, 0, 'h', 'P', 'N', 'G', 'J', 'o', 'h', 'n', '\0', 'B'};
 kojo::binary foo{vec.data(), 0, vec.size()};
 
-std::cout << foo.read<std::uint32_t>(std::endian::little); // 273
-std::cout << foo.read<char>(); // 'h'
-std::cout << foo.read<std::string>(3); // "PNG"
-std::cout << foo.read<std::string>(); // "John"
+std::cout << foo.read_int<std::uint32_t>(std::endian::little); // 273
+std::cout << foo.read_char(); // 'h'
+std::cout << foo.read_str(3); // "PNG"
+std::cout << foo.read_str_(); // "John"
 ```
 
 ### `write()`
 Writes specified data at the end of the internally-stored data. Cannot overwrite.
 ```cpp
-template <typename T> void write(T value, endian endianness);
+template <std::integral T> void write_int(T value, std::endian endianness);
     static_assert(std::is_integral<T>::value, "T must be an integral type.");
-template <typename T> void write(typename std::enable_if<std::is_same<T, char>::value, char>::type value);
-template <typename T> void write(typename std::enable_if<std::is_same<T, std::string>::value, std::string>::type value, size_t length = 0);
-template <typename T> void write(typename std::enable_if<std::is_same<T, std::vector<unsigned char>>::value, std::vector<unsigned char>>::type& value);
+void write_char(const char& value);
+void write_str(std::string_view value, size_t length = 0);
+void write_vector(const std::vector<unsigned char>& value);
 ```
 ```cpp
 kojo::binary foo;
-foo.write<std::int64_t>(-281029, std::endian::big);
-foo.write<std::uint16_t>(934, std::endian::little);
-foo.write<char>('E');
-foo.write<std::string>("Die Speisekarte, bitte."); // Null-terminated.
-foo.write<std::string>("NUCC", 4); // Not null-terminated.
+foo.write_int<std::int64_t>(-281029, std::endian::big);
+foo.write_int<std::uint16_t>(934, std::endian::little);
+foo.write_char('E');
+foo.write_str("Die Speisekarte, bitte."); // Null-terminated.
+foo.write_str("NUCC", 4); // Not null-terminated.
 std::vector<unsigned char> vec{'a', 'B', 'c', 'D'};
-foo.write<std::vector<unsigned char>>(vec);
+foo.write_vector(vec);
 ```
 
 ### `get_pos()`

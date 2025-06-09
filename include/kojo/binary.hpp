@@ -139,7 +139,7 @@ public:
     }
 
     /** Reads integer of select size from current position in file. */
-    template <typename T> T read(std::endian endianness, size_t offset = 0) {
+    template <typename T> T read_int(std::endian endianness, size_t offset = 0) {
         static_assert(std::is_integral<T>::value, "T must be an integral type.");
         T buffer;
         std::memcpy(&buffer, &internal_address[cursor + offset], sizeof(buffer));
@@ -148,8 +148,8 @@ public:
         return buffer;
     }
     /** Reads single char (byte) from current position in file. */
-    template <typename T> typename std::enable_if<std::is_same<T, char>::value, char>::type read(size_t offset = 0) {
-        T buffer = internal_address[cursor + offset];
+    char read_char(size_t offset = 0) {
+        char buffer = internal_address[cursor + offset];
         if (offset == 0) cursor++;
         return buffer;
     }
@@ -157,8 +157,8 @@ public:
      * Reads string from current position in file.
      * @note Size of 0 auto-reads until null byte/terminator.
     */
-    template <typename T> typename std::enable_if<std::is_same<T, std::string>::value, std::string>::type read(size_t size = 0, size_t offset = 0) {
-        T buffer = (const char*)&internal_address[cursor + offset];
+    std::string read_str(size_t size = 0, size_t offset = 0) {
+        std::string buffer = (const char*)&internal_address[cursor + offset];
         if (size == 0) {
             if (offset == 0) cursor += buffer.size() + 1; // Assume string is null terminated if size is 0.
         } else {
@@ -168,7 +168,7 @@ public:
         return buffer;
     }
 
-    template <std::integral T> void write(T value, std::endian endianness) {
+    template <std::integral T> void write_int(T value, std::endian endianness) {
         value = set_endian(value, endianness);
         cursor = internal_storage.size();
         internal_storage.resize(cursor + sizeof(T));
@@ -176,14 +176,14 @@ public:
         cursor += sizeof(T);
         update_pointer();
     }
-    template <std::same_as<char> T> void write(const char& value) {
+    void write_char(const char& value) {
         cursor = internal_storage.size();
         internal_storage.resize(cursor + 1);
         std::memcpy(&internal_storage[cursor], &value, 1);
         cursor++;
         update_pointer();
     }
-    template <std::same_as<std::string>> void write(std::string_view value, size_t length = 0 ) {
+    void write_str(std::string_view value, size_t length = 0) {
         if (value.size() == 0) return;
         size_t padding{1};
         if (length == 0) {
@@ -206,14 +206,14 @@ public:
 
         update_pointer();
     }
-    template <std::same_as<std::vector<unsigned char>>> void write(const std::vector<unsigned char>& value) {
+    void write_vector(const std::vector<unsigned char>& value) {
         cursor = internal_storage.size();
         internal_storage.resize(cursor + value.size());
         std::memcpy(&internal_storage[cursor], value.data(), value.size());
         cursor += value.size();
         update_pointer();
     }
-    template <std::same_as<binary>> void write(binary& value) {
+    void write_binary(binary& value) {
         cursor = internal_storage.size();
         if (value.size() == -1 || value.data() == nullptr) return;
         internal_storage.resize(cursor + value.size());
