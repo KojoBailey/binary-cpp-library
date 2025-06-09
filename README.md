@@ -135,12 +135,12 @@ void clear();
 ```
 ```cpp
 kojo::binary writer;
-writer.write<std::string>("Gone... Reduced to atoms.");
+writer.write_str("Gone... Reduced to atoms.");
 writer.clear();
-writer.write<std::string>("Out with the old...");
+writer.write_str("Out with the old...");
 
 kojo::binary reader{writer};
-std::cout << reader.read<std::string>(); // "Out with the old..."
+std::cout << reader.read_str(); // "Out with the old..."
 ```
 
 ### `data()`
@@ -150,8 +150,8 @@ unsigned char* data();
 ```
 ```cpp
 kojo::binary foo;
-foo.write<char>('B');
-foo.write<std::string>("azinga!");
+foo.write_char('B');
+foo.write_str("azinga!");
 std::cout << foo.data(); // "Bazinga!"
 ```
 
@@ -162,8 +162,8 @@ size_t size();
 ```
 ```cpp
 kojo::binary foo;
-foo.write<std::uint64_t>(23, std::endian::big);
-foo.write<std::uint32_t>(420, std::endian::big);
+foo.write_int<std::uint64_t>(23, std::endian::big);
+foo.write_int<std::uint32_t>(420, std::endian::big);
 std::cout << foo.size(); // 12
 ```
 
@@ -225,9 +225,9 @@ size_t get_pos();
 ```cpp
 kojo::binary foo;
 std::cout << foo.get_pos(); // 0
-foo.write<std::uint32_t>(5, std::endian::big);
+foo.write_int<std::uint32_t>(5, std::endian::big);
 std::cout << foo.get_pos(); // 4
-foo.write<std::string>("YouGotCAGEd");
+foo.write_str("YouGotCAGEd");
 std::cout << foo.get_pos(); // 16
 ```
 
@@ -238,9 +238,9 @@ void set_pos(size_t pos);
 ```
 ```cpp
 kojo::binary foo;
-foo.write<std::string>("Goodbye JoJo!");
+foo.write_str("Goodbye JoJo!");
 foo.set_pos(0);
-std::cout << foo.read<std::string>(); // "Goodbye JoJo!"
+std::cout << foo.read_str(); // "Goodbye JoJo!"
 ```
 
 ### `change_pos()`
@@ -250,10 +250,10 @@ void change_pos(std::int64_t offset);
 ```
 ```cpp
 kojo::binary foo;
-foo.write<std::string>("Goodbye JoJo!");
+foo.write_str("Goodbye JoJo!");
 foo.set_pos(0);
 foo.change_pos(8);
-std::cout << foo.read<std::string>(); // "JoJo!"
+std::cout << foo.read_str(); // "JoJo!"
 ```
 
 ### `align_by()`
@@ -263,11 +263,11 @@ void align_by(size_t bytes);
 ```
 ```cpp
 kojo::binary foo;
-foo.write<std::string>("ABCDEFGHGood grief.");
+foo.write_str("ABCDEFGHGood grief.");
 foo.set_pos(0);
 foo.change_pos(5);
 foo.align_by(4);
-std::cout << foo.read<std::string>(); // "Good grief."
+std::cout << foo.read_str(); // "Good grief."
 ```
 
 ### `dump_file()`
@@ -277,6 +277,6 @@ void dump_file(std::string output_path);
 ```
 ```cpp
 kojo::binary foo;
-foo.write<std::string>("Coca Cola espuma");
+foo.write_str("Coca Cola espuma");
 foo.dump_file("./some_path.bin");
 ```
