@@ -9,43 +9,22 @@
 #include <type_traits>
 #include <vector>
 
+/* DEBUGGING */
 // #include <iostream>
 // #include <format>
-
-#ifdef USE_BINARY_TYPES
-    using u8  = std::uint8_t;
-    using u16 = std::uint16_t;
-    using u32 = std::uint32_t;
-    using u64 = std::uint64_t;
-    using i8  = std::int8_t;
-    using i16 = std::int16_t;
-    using i32 = std::int32_t;
-    using i64 = std::int64_t;
-    using std::string;
-#endif // USE_BINARY_TYPES
 
 /** @note Not `KojoBailey` like on GitHub since that's a bit tedious. */
 namespace kojo {
 
-inline std::endian system_endian() {
-    std::uint32_t num = 0x01020304;
-    return (reinterpret_cast<char*>(&num)[0] == 1) ? std::endian::big : std::endian::little;
-}
-
-inline void charswap(unsigned char& a, unsigned char& b) {
-    a ^= b;
-    b ^= a;
-    a ^= b;
-}
-
-template<typename T> T byteswap(T t) {
-    static_assert(std::is_integral<T>::value, "T must be an integral type.");
-    unsigned char* first = (unsigned char*)&t;
-    unsigned char* last = first + sizeof(T) - 1;
-    while (first < last) {
-        charswap(*first++, *last--);
-    }
-    return t;
+namespace binary::types {
+    using u8  = std::uint8_t;   // 8-bit unsigned   (0 - 255)
+    using u16 = std::uint16_t;  // 16-bit unsigned  (0 - 65,535)
+    using u32 = std::uint32_t;  // 32-bit unsigned  (0 - 4,294,967,295)
+    using u64 = std::uint64_t;  // 64-bit unsigned  (0 - 18,446,744,073,709,551,615)
+    using i8  = std::int8_t;    // 8-bit signed     (-128 - 127)
+    using i16 = std::int16_t;   // 16-bit signed    (-32,768 - 32,767)
+    using i32 = std::int32_t;   // 32-bit signed    (-2,147,483,648 - 2,147,483,647)
+    using i64 = std::int64_t;   // 64-bit signed    (-9,223,372,036,854,775,808 - 9,223,372,036,854,775,807)
 }
 
 class binary {
@@ -111,7 +90,7 @@ public:
         }
     }
     /* Load binary data from other binary object. */
-    void load(binary& binary_data, size_t start = 0, size_t size = -1) {
+    void load(binary& binary_data, const size_t start = 0, size_t size = -1) {
         if (size == -1) size = binary_data.size() - start;
         load(binary_data.data(), start, size);
     }
@@ -126,7 +105,7 @@ public:
         return internal_address;
     }
     /** Return size of binary data. */
-    long long size() {
+    long long size() const {
         return (internal_storage.size() == 0) ? -1 : internal_storage.size();
     }
 
@@ -248,6 +227,27 @@ public:
             file_output << byte;
         }
         file_output.close();
+    }
+
+    /* STATIC UTILITIES */
+
+    inline static std::endian system_endian() {
+        std::uint32_t num = 0x01020304;
+        return (reinterpret_cast<char*>(&num)[0] == 1) ? std::endian::big : std::endian::little;
+    }
+
+    inline static void charswap(unsigned char& a, unsigned char& b) {
+        a ^= b;
+        b ^= a;
+        a ^= b;
+    }
+    template<typename T> static T byteswap(T num) {
+        static_assert(std::is_integral<T>::value, "T must be an integral type.");
+        unsigned char* first = (unsigned char*)&num;
+        unsigned char* last = first + sizeof(T) - 1;
+        while (first < last)
+            charswap(*first++, *last--);
+        return num;
     }
 
 private:
