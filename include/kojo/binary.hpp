@@ -2,167 +2,98 @@
 #define KOJO_BINARY_LIB
 
 #include <bit>
-#include <cstring>      // std::memcpy
-#include <fstream>
 #include <cstdint>
-#include <string_view>
-#include <type_traits>
+#include <cstring>
+#include <filesystem>
+#include <fstream>
 #include <vector>
 
-/* DEBUGGING */
-// #include <iostream>
-// #include <format>
+#ifdef KOJO_BINARY_LIB_DEBUG
+    #include <iostream>
+    #include <format>
+    #include <cassert>
+    #define ASSERT(exp, msg) assert((void(msg), exp))
+#else
+    #define ASSERT(exp, msg)
+#endif
 
-/** @note Not `KojoBailey` like on GitHub since that's a bit tedious. */
+/** Kojo Bailey */
 namespace kojo {
 
-namespace binary::types {
-    using u8  = std::uint8_t;   // 8-bit unsigned   (0 - 255)
-    using u16 = std::uint16_t;  // 16-bit unsigned  (0 - 65,535)
-    using u32 = std::uint32_t;  // 32-bit unsigned  (0 - 4,294,967,295)
-    using u64 = std::uint64_t;  // 64-bit unsigned  (0 - 18,446,744,073,709,551,615)
-    using i8  = std::int8_t;    // 8-bit signed     (-128 - 127)
-    using i16 = std::int16_t;   // 16-bit signed    (-32,768 - 32,767)
-    using i32 = std::int32_t;   // 32-bit signed    (-2,147,483,648 - 2,147,483,647)
-    using i64 = std::int64_t;   // 64-bit signed    (-9,223,372,036,854,775,808 - 9,223,372,036,854,775,807)
+namespace binary_types {
+    using std::byte;
+    using u8  = std::uint8_t;       // 8-bit unsigned   (0 - 255)
+    using u16 = std::uint16_t;      // 16-bit unsigned  (0 - 65,535)
+    using u32 = std::uint32_t;      // 32-bit unsigned  (0 - 4,294,967,295)
+    using u64 = std::uint64_t;      // 64-bit unsigned  (0 - 18,446,744,073,709,551,615)
+    using i8  = std::int8_t;        // 8-bit signed     (-128 - 127)
+    using i16 = std::int16_t;       // 16-bit signed    (-32,768 - 32,767)
+    using i32 = std::int32_t;       // 32-bit signed    (-2,147,483,648 - 2,147,483,647)
+    using i64 = std::int64_t;       // 64-bit signed    (-9,223,372,036,854,775,808 - 9,223,372,036,854,775,807)
+    using f16 = _Float16;
+    using f32 = _Float32;
+    using f64 = _Float64;
+    using str = std::string;        // Stores its own copy of a string.
+    using sv  = std::string_view;   // Accesses a string without copying it.
 }
 
 class binary {
 public:
-    /** Initialise binary data from filepath. */
     binary() = default;
-    binary(std::string path_input, size_t start = 0, size_t size = -1) {
-        load(path_input, start, size);
+    binary(const std::filesystem::path& path, size_t size = SIZE_MAX, const size_t start = 0) {
+        load_from_path(path, size, start);
     }
-    binary(void* pointer, size_t start = 0, size_t size = -1) {
-        load(pointer, start, size);
+    binary(const std::byte* src, const size_t size, const size_t start = 0) {
+        load_from_pointer(src, size, start);
     }
-    binary(binary& binary_data, size_t start = 0, size_t size = -1) {
-        load(binary_data.data(), start, size);
-    }
-
     binary(binary&& other) noexcept :
-        internal_address(other.internal_address),
-        internal_storage(std::move(other.internal_storage)),
+        storage(std::move(other.storage)),
         cursor(other.cursor) {}
-
     binary& operator=(binary&& other) noexcept {
         if (this != &other) {
-            internal_address = other.internal_address;
-            internal_storage = std::move(other.internal_storage);
+            storage = std::move(other.storage);
             cursor = other.cursor;
         }
         return *this;
     }
+    binary(const binary& other) = default;
+    binary& operator=(const binary& other) = default;
 
-    /* Load binary data from filepath. */
-    void load(std::string path_input, size_t start = 0, size_t size = -1) {
-        file_input.open(path_input, std::ios::binary);
-        if (!file_input.is_open()) return;
-        // Read file to vector for faster access.
-        clear();
-        file_input.seekg(start);
-        if (size == -1) {
-            char buffer;
-            while (file_input.get(buffer)) {
-                internal_storage.push_back(buffer);
-            }
-        } else {
-            internal_storage.reserve(size);
-            for (int i = 0; i < size; i++) {
-                internal_storage.push_back(file_input.get());
-            }
-        }
-        file_input.close();
-        update_pointer();
-    }
-    /* Load binary data from address. */
-    void load(void* pointer, size_t start = 0, size_t size = -1) {
-        clear();
-        if (size == -1) {
-            internal_address = (decltype(internal_address))pointer + start;
-        } else {
-            internal_storage.reserve(size);
-            for (int i = start; i < size + start; i++) {
-                internal_storage.push_back(((decltype(internal_address))pointer)[i]);
-            }
-            update_pointer();
-        }
-    }
-    /* Load binary data from other binary object. */
-    void load(binary& binary_data, const size_t start = 0, size_t size = -1) {
-        if (size == -1) size = binary_data.size() - start;
-        load(binary_data.data(), start, size);
+    enum error_status {
+        OK = 0,
+        FILE_NOT_EXIST,         // File could not be found at specified path.
+        INVALID_FILE,           // Specified path does not lead to a regular file.
+        FILE_NOT_OPEN,          // Attempting to open the specified file failed.
+        INVALID_FILE_SIZE,      // The specified size was invalid for whatever reason.
+        NULL_POINTER,           // Pointer argument is null and cannot be used.
+        INSUFFICIENT_MEMORY,    // Ran out of memory while trying to resize.
+    };
+    error_status get_error_status() const {
+        return error_status;
     }
 
-    void clear() {
-        internal_address = nullptr;
-        internal_storage.clear();
-        cursor = 0;
+    void load(const std::filesystem::path& path, size_t size = SIZE_MAX, const size_t start = 0) {
+        load_from_path(path, size, start);
     }
-    unsigned char* data() {
-        update_pointer();
-        return internal_address;
-    }
-    /** Return size of binary data. */
-    long long size() const {
-        return (internal_storage.size() == 0) ? -1 : internal_storage.size();
+    void load(const std::byte* src, const size_t size, const size_t start = 0) {
+        load_from_pointer(src, size, start);
     }
 
-    /** Changes the endianness of an integer depending on your system. */
-    template <typename T> T set_endian(T value, std::endian endianness) {
-        static_assert(std::is_integral<T>::value, "T must be an integral type.");
-        return (system_endian() != endianness)
-            ? byteswap(value)
-            : value;
-    }
-
-    /** Reads integer of select size from current position in file. */
-    template <typename T> T read_int(std::endian endianness, size_t offset = 0) {
-        static_assert(std::is_integral<T>::value, "T must be an integral type.");
-        T buffer;
-        std::memcpy(&buffer, &internal_address[cursor + offset], sizeof(buffer));
-        buffer = set_endian(buffer, endianness);
-        if (offset == 0) cursor += sizeof(buffer);
-        return buffer;
-    }
-    /** Reads single char (byte) from current position in file. */
-    char read_char(size_t offset = 0) {
-        char buffer = internal_address[cursor + offset];
-        if (offset == 0) cursor++;
-        return buffer;
-    }
-    /**
-     * Reads string from current position in file.
-     * @note Size of 0 auto-reads until null byte/terminator.
-    */
-    std::string read_str(size_t size = 0, size_t offset = 0) {
-        std::string buffer = (const char*)&internal_address[cursor + offset];
-        if (size == 0) {
-            if (offset == 0) cursor += buffer.size() + 1; // Assume string is null terminated if size is 0.
-        } else {
-            buffer = buffer.substr(0, size);
-            if (offset == 0) cursor += size;
-        }
-        return buffer;
-    }
-
-    template <std::integral T> void write_int(T value, std::endian endianness) {
+    template<std::integral T> void write(T value, std::endian endianness) {
         value = set_endian(value, endianness);
-        cursor = internal_storage.size();
-        internal_storage.resize(cursor + sizeof(T));
-        std::memcpy(&internal_storage[cursor], &value, sizeof(T));
+        if (cursor + sizeof(T) > storage.size())
+            storage.resize(cursor + sizeof(T));
+        std::memcpy(&storage[cursor], &value, sizeof(T));
         cursor += sizeof(T);
-        update_pointer();
     }
-    void write_char(const char& value) {
-        cursor = internal_storage.size();
-        internal_storage.resize(cursor + 1);
-        std::memcpy(&internal_storage[cursor], &value, 1);
+    template<std::same_as<std::byte> T> void write(const T value) {
+        if (cursor + 1 > storage.size())
+            storage.resize(cursor + 1);
+        std::memcpy(&storage[cursor], &value, 1);
         cursor++;
-        update_pointer();
     }
-    void write_str(std::string_view value, size_t length = 0) {
+    template<std::same_as<std::string_view> T> void write(const T value, size_t length = 0) {
+        // Determine length and padding.
         if (value.size() == 0) return;
         size_t padding{1};
         if (length == 0) {
@@ -172,97 +103,209 @@ public:
         }
 
         // Write string to memory.
-        cursor = internal_storage.size();
-        internal_storage.resize(cursor + length + padding);
-        std::memcpy(&internal_storage[cursor], value.data(), length);
+        if (cursor + length + padding > storage.size())
+            storage.resize(cursor + length + padding);
+        std::memcpy(&storage[cursor], value.data(), length);
         cursor += length;
 
         // Write any padding.
-        char zero{'\0'};
+        constexpr char zero = '\0';
         for (size_t i = 0; i < padding; i++) {
-            std::memcpy(&internal_storage[cursor++], &zero, 1);
+            std::memcpy(&storage[cursor++], &zero, 1);
         }
-
-        update_pointer();
-    }
-    void write_vector(const std::vector<unsigned char>& value) {
-        cursor = internal_storage.size();
-        internal_storage.resize(cursor + value.size());
-        std::memcpy(&internal_storage[cursor], value.data(), value.size());
-        cursor += value.size();
-        update_pointer();
-    }
-    void write_binary(binary& value) {
-        cursor = internal_storage.size();
-        if (value.size() == -1 || value.data() == nullptr) return;
-        internal_storage.resize(cursor + value.size());
-        std::memcpy(&internal_storage[cursor], value.data(), value.size());
-        cursor += value.size();
-        update_pointer();
     }
 
-    size_t get_pos() {
+    size_t size() const {
+        return storage.size();
+    }
+    const std::byte* data() const {
+        return storage.data();
+    }
+    bool empty() const {
+        return storage.empty();
+    }
+
+    void go_to_end() {
+        cursor = storage.size();
+    }
+    size_t get_pos() const {
         return cursor;
-    }
-    bool at_end() {
-        return (get_pos() >= size());
     }
     void set_pos(size_t pos) {
         cursor = pos;
     }
-    /* Changes the position of the file "cursor" by an offset, positive or negative. */
-    void change_pos(std::int64_t offset) {
+    void change_pos(size_t offset) {
         cursor += offset;
     }
-    /* Sets the "cursor" position to the next multiple of [input]. */
     void align_by(size_t bytes) {
         cursor += bytes - ( (cursor - 1) % bytes ) - 1;
-        if (cursor > internal_storage.size() && internal_storage.size() != 0)
-            internal_storage.resize(cursor);
     }
 
     void dump_file(std::string output_path) {
-        file_output.open(output_path, std::ios::binary);
-        for (unsigned char byte : internal_storage) {
-            file_output << byte;
-        }
+        std::ofstream file_output{output_path, std::ios::binary};
+        for (std::byte byte : storage)
+            file_output << static_cast<char>(byte);
         file_output.close();
     }
 
-    /* STATIC UTILITIES */
-
-    inline static std::endian system_endian() {
-        std::uint32_t num = 0x01020304;
-        return (reinterpret_cast<char*>(&num)[0] == 1) ? std::endian::big : std::endian::little;
-    }
-
-    inline static void charswap(unsigned char& a, unsigned char& b) {
-        a ^= b;
-        b ^= a;
-        a ^= b;
-    }
-    template<typename T> static T byteswap(T num) {
+    template <typename T> static T set_endian(T value, std::endian endianness) {
         static_assert(std::is_integral<T>::value, "T must be an integral type.");
-        unsigned char* first = (unsigned char*)&num;
-        unsigned char* last = first + sizeof(T) - 1;
-        while (first < last)
-            charswap(*first++, *last--);
-        return num;
+        return (std::endian::native != endianness)
+            ? std::byteswap(value)
+            : value;
     }
 
 private:
-    unsigned char* internal_address{nullptr};       // Address of stored or input data.
-    size_t cursor{0};                               // Current position in the data.
-    std::vector<unsigned char> internal_storage;    // Each char represents a byte.
-    std::ifstream file_input;
-    std::ofstream file_output;
+    void load_from_path(const std::filesystem::path& path, size_t size = SIZE_MAX, const size_t start = 0) {
+        storage.clear();
 
-    void update_pointer() {
-        if (internal_storage.data() != nullptr)
-            internal_address = internal_storage.data();
+        if (!std::filesystem::exists(path)) {
+            error_status = error_status::FILE_NOT_EXIST;
+            return;
+        }
+        if (!std::filesystem::is_regular_file(path)) {
+            error_status = error_status::INVALID_FILE;
+            return;
+        }
+        std::ifstream file{path, std::ios::binary};
+        if (!file.is_open()) {
+            error_status = error_status::FILE_NOT_OPEN;
+            return;
+        }
+
+        if (size == SIZE_MAX) {
+            file.seekg(0, std::ios::end);
+            size = static_cast<size_t>(file.tellg()) - start;
+        }
+        file.seekg(start);
+        
+        storage.resize(size);
+        file.read(reinterpret_cast<char*>(storage.data()), size);
+
+        if (file.gcount() != size) {
+            storage.resize(file.gcount());
+            error_status = error_status::INVALID_FILE_SIZE;
+            return;
+        }
+        error_status = error_status::OK;
     }
+
+    void load_from_pointer(const std::byte* src, const size_t size, const size_t start = 0) {
+        storage.clear();
+        if (size == 0) return;
+        if (src == nullptr) {
+            error_status = error_status::NULL_POINTER;
+            return;
+        }
+
+        try {
+            storage.resize(size);
+        } catch (const std::bad_alloc&) {
+            error_status = error_status::INSUFFICIENT_MEMORY;
+            return;
+        }
+        std::memcpy(storage.data(), src + start, size);
+        error_status = error_status::OK;
+    }
+
+    error_status error_status{error_status::OK};
+
+    std::vector<std::byte> storage{};
+    size_t cursor{0};
 };
 
-} // namespace
+class binary_view {
+public:
+    binary_view() = default;
+    binary_view(const binary& binary) {
+        address = binary.data();
+    }
+    binary_view(binary_view&& other) noexcept :
+        address(std::move(other.address)),
+        cursor(other.cursor) {}
+
+    binary_view& operator=(binary_view&& other) noexcept {
+        if (this != &other) {
+            address = std::move(other.address);
+            cursor = other.cursor;
+        }
+        return *this;
+    }
+
+    enum error_status {
+        OK = 0,
+        NULL_MEMORY,         // Attempted to read from null/out-of-bounds memory.
+    };
+    error_status get_error_status() const {
+        return error_status;
+    }
+
+    template<std::integral T> T read(std::endian endianness, size_t offset = 0) {
+        T buffer;
+        if (&address[cursor + offset] == nullptr) {
+            error_status = error_status::NULL_MEMORY;
+            return 0;
+        }
+        std::memcpy(&buffer, &address[cursor + offset], sizeof(buffer));
+        buffer = set_endian(buffer, endianness);
+        if (offset == 0)
+            cursor += sizeof(buffer);
+        return buffer;
+    }
+    template<std::same_as<std::byte> T> T read(size_t offset = 0) {
+        std::byte buffer = address[cursor + offset];
+        if (offset == 0)
+            cursor++;
+        return buffer;
+    }
+    // Strings of explicit length (copy).
+    template<std::same_as<std::string> T> T read(size_t size, size_t offset = 0) {
+        std::string buffer = reinterpret_cast<const char*>(&address[cursor + offset]);
+        buffer = buffer.substr(0, size);
+        if (offset == 0)
+            cursor += size;
+        return buffer;
+    }
+    // Null-terminated strings (reference).
+    template<std::same_as<std::string_view> T> T read(size_t offset = 0) {
+        std::string_view buffer = reinterpret_cast<const char*>(&address[cursor + offset]);
+        if (offset == 0)
+            cursor += buffer.size() + 1;
+        return buffer;
+    }
+
+    template<typename T> T read_struct(size_t offset = 0) {
+        T buffer;
+        std::memcpy(&buffer, &address[cursor + offset], sizeof(buffer));
+        if (offset == 0)
+            cursor += sizeof(buffer);
+        return buffer;
+    }
+
+    const std::byte* data() const {
+        return address;
+    }
+
+    size_t get_pos() const {
+        return cursor;
+    }
+    void set_pos(size_t pos) {
+        cursor = pos;
+    }
+    void change_pos(size_t offset) {
+        cursor += offset;
+    }
+    void align_by(size_t bytes) {
+        cursor += bytes - ( (cursor - 1) % bytes ) - 1;
+    }
+
+private:
+    error_status error_status{error_status::OK};
+
+    const std::byte* address{nullptr};
+    size_t cursor{0};
+};
+
+}
 
 #endif // KOJO_BINARY_LIB

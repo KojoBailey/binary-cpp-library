@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "*.bt": "c",
+        "*.json": "jsonc",
         "vector": "cpp",
         "array": "cpp",
         "deque": "cpp",
@@ -58,6 +59,7 @@
         "typeinfo": "cpp",
         "variant": "cpp",
         "iostream": "cpp",
-        "print": "cpp"
+        "print": "cpp",
+        "stdfloat": "cpp"
     }
 }
