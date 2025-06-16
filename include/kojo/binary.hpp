@@ -252,6 +252,13 @@ public:
         return error_status;
     }
 
+    void load(const std::byte* src, const size_t start = 0) {
+        address = &src[start];
+    }
+    void load(const binary& binary, const size_t start = 0) {
+        address = &binary.data()[start];
+    }
+
     template<std::integral T> T read(std::endian endianness, size_t offset = 0) {
         T buffer;
         if (&address[cursor + offset] == nullptr) {
