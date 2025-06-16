@@ -1,17 +1,19 @@
 # [binary++](https://github.com/KojoBailey/binary-cpp-library)
-This library for **C++20 and newer** assists reading from and writing to **binary data**, making use of my own experience as a reverse engineer.
+This library for **C++23 and newer** assists reading from and writing to **binary data**, making use of my own experience as a reverse engineer.
 
 It aims to:
-- Make use of modern C++ features where **useful** (i.e. `std::endian` and co.).
+- Make use of modern C++ features where **useful** (e.g. `std::endian` and `std::byteswap`).
 - Be as **open-purposed** as possible for a wide range of use cases.
 - Mirror the **standard library's style** for interface.
 - Receive updates as necessary.
+
+**WARNING:** The documentation is currently a bit outdated. Will update soon!
 
 ## Table of Contents
 - [Dependencies](#dependencies)
 - [Usage](#usage)
 - [Documentation](#documentation)
-    - [`binary{}`](#binary-1)
+    - [`binary()`](#binary-1)
     - [`load()`](#load)
     - [`clear()`](#clear)
     - [`data()`](#data)
@@ -29,58 +31,64 @@ It aims to:
 Here is the full list of includes used by this library:
 ```cpp
 #include <bit>
-#include <cstring>    
-#include <fstream>
 #include <cstdint>
+#include <cstring>
+#include <filesystem>
+#include <fstream>
 #include <string_view>
-#include <type_traits>
 #include <vector>
 ```
 
 Otherwise, no external dependencies are used.
 
 ## Usage
-With a single header file at only ~10KB, it's very easy to start using this library. Support for build systems like **CMake** may be added in the future.
-
-```cpp
-#include <kojo/binary.hpp> // or something along those lines.
-```
-
-A `binary` class is provided, under the `kojo` namespace, and can be initialised via a **file path** as an `std::string`, the **address** of the start of some data, or **another `binary` object**.
-
-Alternatively, you can default initialise, and instead use `.load()` later on. Note that this will clear any data you may have had loaded into the object previously.
+With a single header file at only ~10KB, it's very easy to start using this library. It also has support for **CMake**.
 
 ```cpp
 #include <kojo/binary.hpp>
+```
 
-int main() {
-    std::vector<char> some_data = {'S', 'o', 'm', 'e', ' ', 'd', 'a', 't', 'a', '.'};
+Two **classes**, `binary` and `binary_view`, are provided under the `kojo` namespace, similar to how the C++ STL has `std::string` and `std::string_view`.
+* The purpose of `kojo::binary` is to **store** and **write** binary data, allowing loading from a **file path**, a **memory address**, or another `kojo::binary` object.
+* The purpose of `kojo::binary_view` is to **read** binary data *without* storage or modification, allowing loads from a **memory address** or `kojo::binary` object.
 
-    // Initialising
-    kojo::binary from_file{"./example/file/path.bin"};
-    kojo::binary from_address{some_data.data()};
-    kojo::binary from_object{from_file};
+```cpp
+class binary;
+class binary_view;
+```
 
-    // Using `load()`
-    kojo::binary from_file;
-    from_file.load("./example/file/path.bin");
-    kojo::binary from_address;
-    from_address.load(some_data.data());
-    kojo::binary load_from_object;
-    from_object.load(&from_file);
+This library also offers **abbreviations** which you can enable optionally by `using` the `kojo::binary_types` namespace. Please note that the float types currently use the GCC/Clang options, which will be replaced with the floats from C++23's `<stdfloat>` header once I get my hands on it.
+```cpp
+namespace kojo::binary_types {
+    using std::byte;
+    using u8  = std::uint8_t;       // 8-bit unsigned   (0 - 255)
+    using u16 = std::uint16_t;      // 16-bit unsigned  (0 - 65,535)
+    using u32 = std::uint32_t;      // 32-bit unsigned  (0 - 4,294,967,295)
+    using u64 = std::uint64_t;      // 64-bit unsigned  (0 - 18,446,744,073,709,551,615)
+    using i8  = std::int8_t;        // 8-bit signed     (-128 - 127)
+    using i16 = std::int16_t;       // 16-bit signed    (-32,768 - 32,767)
+    using i32 = std::int32_t;       // 32-bit signed    (-2,147,483,648 - 2,147,483,647)
+    using i64 = std::int64_t;       // 64-bit signed    (-9,223,372,036,854,775,808 - 9,223,372,036,854,775,807)
+    using f16 = _Float16;
+    using f32 = _Float32;
+    using f64 = _Float64;
+    using str = std::string;        // Stores its own copy of a string.
+    using sv  = std::string_view;   // Accesses a string without copying it.
 }
 ```
 
 ## Documentation
 Here is a list of every publicly-accessible element for the `binary` class, with examples:
 
-### `binary{}`
-The **constructor**. Either initialises a `binary` object that is empty, or with either a file (via filepath) or binary data.
+### `binary()`
+The **constructor**.
 ```cpp
 binary();
-binary(std::string path_input, size_t start = 0, size_t size = -1);
-binary(void* pointer, size_t start = 0, size_t size = -1);
-binary(binary& binary_data, size_t start = 0, size_t size = -1);
+binary(const std::filesystem::path& path, size_t size = SIZE_MAX, const size_t start = 0);
+binary(const std::byte* src, const size_t size, const size_t start = 0);
+binary(const std::vector<std::byte>& vec, const size_t size = 0, const size_t start = 0);
+binary(binary&& other);
+binary& operator=(binary&& other);
 ```
 
 ```cpp
