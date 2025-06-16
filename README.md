@@ -76,6 +76,15 @@ namespace kojo::binary_types {
     using sv  = std::string_view;   // Accesses a string without copying it.
 }
 ```
+```
+#include <kojo/binary.hpp>
+using namespace kojo::binary_types;
+
+int main() {
+    kojo::binary foo;
+    foo.write<u32>(23, std::little::endian);
+    foo.write<sv>("Hello, world!");
+}
 
 ## Documentation
 Here is a list of every publicly-accessible element for the `binary` class, with examples:
