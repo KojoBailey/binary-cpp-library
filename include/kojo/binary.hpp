@@ -167,6 +167,7 @@ public:
 private:
     void load_from_path(const std::filesystem::path& path, size_t size = SIZE_MAX, const size_t start = 0) {
         storage.clear();
+        cursor = 0;
 
         if (!std::filesystem::exists(path)) {
             error_status = error_status::FILE_NOT_EXIST;
@@ -201,6 +202,7 @@ private:
 
     void load_from_pointer(const std::byte* src, const size_t size, const size_t start = 0) {
         storage.clear();
+        cursor = 0;
         if (size == 0) return;
         if (src == nullptr) {
             error_status = error_status::NULL_POINTER;
@@ -227,10 +229,10 @@ class binary_view {
 public:
     binary_view() = default;
     binary_view(const std::byte* src, const size_t start = 0) {
-        address = &src[start];
+        load(src, start);
     }
     binary_view(const binary& binary, const size_t start = 0) {
-        address = &binary.data()[start];
+        load(binary, start);
     }
     binary_view(binary_view&& other) noexcept :
         address(std::move(other.address)),
@@ -254,9 +256,11 @@ public:
 
     void load(const std::byte* src, const size_t start = 0) {
         address = &src[start];
+        cursor = 0;
     }
     void load(const binary& binary, const size_t start = 0) {
         address = &binary.data()[start];
+        cursor = 0;
     }
 
     template<std::integral T> T read(std::endian endianness, size_t offset = 0) {
