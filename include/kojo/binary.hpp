@@ -53,11 +53,11 @@ public:
     }
     binary(binary&& other) noexcept :
         storage(std::move(other.storage)),
-        cursor(other.cursor) {}
+        pos(other.pos) {}
     binary& operator=(binary&& other) noexcept {
         if (this != &other) {
             storage = std::move(other.storage);
-            cursor = other.cursor;
+            pos = other.pos;
         }
         return *this;
     }
@@ -90,16 +90,16 @@ public:
 
     template<std::integral T> void write(T value, std::endian endianness) {
         value = set_endian(value, endianness);
-        if (cursor + sizeof(T) > storage.size())
-            storage.resize(cursor + sizeof(T));
-        std::memcpy(&storage[cursor], &value, sizeof(T));
-        cursor += sizeof(T);
+        if (pos + sizeof(T) > storage.size())
+            storage.resize(pos + sizeof(T));
+        std::memcpy(&storage[pos], &value, sizeof(T));
+        pos += sizeof(T);
     }
     template<std::same_as<std::byte> T> void write(const T value) {
-        if (cursor + 1 > storage.size())
-            storage.resize(cursor + 1);
-        std::memcpy(&storage[cursor], &value, 1);
-        cursor++;
+        if (pos + 1 > storage.size())
+            storage.resize(pos + 1);
+        std::memcpy(&storage[pos], &value, 1);
+        pos++;
     }
     template<std::same_as<std::string_view> T> void write(const T value, size_t length = 0) {
         // Determine length and padding.
@@ -112,15 +112,15 @@ public:
         }
 
         // Write string to memory.
-        if (cursor + length + padding > storage.size())
-            storage.resize(cursor + length + padding);
-        std::memcpy(&storage[cursor], value.data(), length);
-        cursor += length;
+        if (pos + length + padding > storage.size())
+            storage.resize(pos + length + padding);
+        std::memcpy(&storage[pos], value.data(), length);
+        pos += length;
 
         // Write any padding.
         constexpr char zero = '\0';
         for (size_t i = 0; i < padding; i++) {
-            std::memcpy(&storage[cursor++], &zero, 1);
+            std::memcpy(&storage[pos++], &zero, 1);
         }
     }
 
@@ -135,19 +135,19 @@ public:
     }
 
     void go_to_end() {
-        cursor = storage.size();
+        pos = storage.size();
     }
     size_t get_pos() const {
-        return cursor;
+        return pos;
     }
     void set_pos(size_t pos) {
-        cursor = pos;
+        pos = pos;
     }
     void change_pos(size_t offset) {
-        cursor += offset;
+        pos += offset;
     }
     void align_by(size_t bytes) {
-        cursor += bytes - ( (cursor - 1) % bytes ) - 1;
+        pos += bytes - ( (pos - 1) % bytes ) - 1;
     }
 
     void dump_file(std::string output_path) {
@@ -167,7 +167,7 @@ public:
 private:
     void load_from_path(const std::filesystem::path& path, size_t size = SIZE_MAX, const size_t start = 0) {
         storage.clear();
-        cursor = 0;
+        pos = 0;
 
         if (!std::filesystem::exists(path)) {
             error_status = error_status::FILE_NOT_EXIST;
@@ -202,7 +202,7 @@ private:
 
     void load_from_pointer(const std::byte* src, const size_t size, const size_t start = 0) {
         storage.clear();
-        cursor = 0;
+        pos = 0;
         if (size == 0) return;
         if (src == nullptr) {
             error_status = error_status::NULL_POINTER;
@@ -222,7 +222,7 @@ private:
     error_status error_status{error_status::OK};
 
     std::vector<std::byte> storage{};
-    size_t cursor{0};
+    size_t pos{0};
 };
 
 class binary_view {
@@ -236,12 +236,12 @@ public:
     }
     binary_view(binary_view&& other) noexcept :
         address(std::move(other.address)),
-        cursor(other.cursor) {}
+        pos(other.pos) {}
 
     binary_view& operator=(binary_view&& other) noexcept {
         if (this != &other) {
             address = std::move(other.address);
-            cursor = other.cursor;
+            pos = other.pos;
         }
         return *this;
     }
@@ -256,52 +256,52 @@ public:
 
     void load(const std::byte* src, const size_t start = 0) {
         address = &src[start];
-        cursor = 0;
+        pos = 0;
     }
     void load(const binary& binary, const size_t start = 0) {
         address = &binary.data()[start];
-        cursor = 0;
+        pos = 0;
     }
 
     template<std::integral T> T read(std::endian endianness, size_t offset = 0) {
         T buffer;
-        if (&address[cursor + offset] == nullptr) {
+        if (&address[pos + offset] == nullptr) {
             error_status = error_status::NULL_MEMORY;
             return 0;
         }
-        std::memcpy(&buffer, &address[cursor + offset], sizeof(buffer));
+        std::memcpy(&buffer, &address[pos + offset], sizeof(buffer));
         buffer = set_endian(buffer, endianness);
         if (offset == 0)
-            cursor += sizeof(buffer);
+            pos += sizeof(buffer);
         return buffer;
     }
     template<std::same_as<std::byte> T> T read(size_t offset = 0) {
-        std::byte buffer = address[cursor + offset];
+        std::byte buffer = address[pos + offset];
         if (offset == 0)
-            cursor++;
+            pos++;
         return buffer;
     }
     // Strings of explicit length (copy).
     template<std::same_as<std::string> T> T read(size_t size, size_t offset = 0) {
-        std::string buffer = reinterpret_cast<const char*>(&address[cursor + offset]);
+        std::string buffer = reinterpret_cast<const char*>(&address[pos + offset]);
         buffer = buffer.substr(0, size);
         if (offset == 0)
-            cursor += size;
+            pos += size;
         return buffer;
     }
     // Null-terminated strings (reference).
     template<std::same_as<std::string_view> T> T read(size_t offset = 0) {
-        std::string_view buffer = reinterpret_cast<const char*>(&address[cursor + offset]);
+        std::string_view buffer = reinterpret_cast<const char*>(&address[pos + offset]);
         if (offset == 0)
-            cursor += buffer.size() + 1;
+            pos += buffer.size() + 1;
         return buffer;
     }
 
     template<typename T> T read_struct(size_t offset = 0) {
         T buffer;
-        std::memcpy(&buffer, &address[cursor + offset], sizeof(buffer));
+        std::memcpy(&buffer, &address[pos + offset], sizeof(buffer));
         if (offset == 0)
-            cursor += sizeof(buffer);
+            pos += sizeof(buffer);
         return buffer;
     }
 
@@ -310,23 +310,23 @@ public:
     }
 
     size_t get_pos() const {
-        return cursor;
+        return pos;
     }
     void set_pos(size_t pos) {
-        cursor = pos;
+        pos = pos;
     }
     void change_pos(size_t offset) {
-        cursor += offset;
+        pos += offset;
     }
     void align_by(size_t bytes) {
-        cursor += bytes - ( (cursor - 1) % bytes ) - 1;
+        pos += bytes - ( (pos - 1) % bytes ) - 1;
     }
 
 private:
     error_status error_status{error_status::OK};
 
     const std::byte* address{nullptr};
-    size_t cursor{0};
+    size_t pos{0};
 };
 
 }
