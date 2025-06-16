@@ -6,6 +6,7 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <string_view>
 #include <vector>
 
 #ifdef KOJO_BINARY_LIB_DEBUG
@@ -46,6 +47,10 @@ public:
     binary(const std::byte* src, const size_t size, const size_t start = 0) {
         load_from_pointer(src, size, start);
     }
+    binary(const std::vector<std::byte>& vec, const size_t size = 0, const size_t start = 0) {
+        size_t true_size = (size == 0) ? vec.size() : size;
+        load_from_pointer(vec.data(), true_size, start);
+    }
     binary(binary&& other) noexcept :
         storage(std::move(other.storage)),
         cursor(other.cursor) {}
@@ -77,6 +82,10 @@ public:
     }
     void load(const std::byte* src, const size_t size, const size_t start = 0) {
         load_from_pointer(src, size, start);
+    }
+    void load(const std::vector<std::byte>& vec, const size_t size = 0, const size_t start = 0) {
+        size_t true_size = (size == 0) ? vec.size() : size;
+        load_from_pointer(vec.data(), true_size, start);
     }
 
     template<std::integral T> void write(T value, std::endian endianness) {
@@ -217,8 +226,11 @@ private:
 class binary_view {
 public:
     binary_view() = default;
-    binary_view(const binary& binary) {
-        address = binary.data();
+    binary_view(const std::byte* src, const size_t start = 0) {
+        address = &src[start];
+    }
+    binary_view(const binary& binary, const size_t start = 0) {
+        address = &binary.data()[start];
     }
     binary_view(binary_view&& other) noexcept :
         address(std::move(other.address)),
