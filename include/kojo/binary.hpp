@@ -41,16 +41,6 @@ namespace binary_types {
 class binary {
 public:
     binary() = default;
-    binary(const std::filesystem::path& path, size_t size = SIZE_MAX, const size_t start = 0) {
-        load_from_path(path, size, start);
-    }
-    binary(const std::byte* src, const size_t size, const size_t start = 0) {
-        load_from_pointer(src, size, start);
-    }
-    binary(const std::vector<std::byte>& vec, const size_t size = 0, const size_t start = 0) {
-        size_t true_size = (size == 0) ? vec.size() : size;
-        load_from_pointer(vec.data(), true_size, start);
-    }
     binary(binary&& other) noexcept :
         storage(std::move(other.storage)),
         pos(other.pos) {}
@@ -63,6 +53,18 @@ public:
     }
     binary(const binary& other) = default;
     binary& operator=(const binary& other) = default;
+    ~binary() = default;
+
+    binary(const std::filesystem::path& path, size_t size = SIZE_MAX, const size_t start = 0) {
+        load_from_path(path, size, start);
+    }
+    binary(const std::byte* src, const size_t size, const size_t start = 0) {
+        load_from_pointer(src, size, start);
+    }
+    binary(const std::vector<std::byte>& vec, const size_t size = 0, const size_t start = 0) {
+        size_t true_size = (size == 0) ? vec.size() : size;
+        load_from_pointer(vec.data(), true_size, start);
+    }
 
     enum error_status {
         OK = 0,
@@ -228,12 +230,6 @@ private:
 class binary_view {
 public:
     binary_view() = default;
-    binary_view(const std::byte* src, const size_t start = 0) {
-        load(src, start);
-    }
-    binary_view(const binary& binary, const size_t start = 0) {
-        load(binary, start);
-    }
     binary_view(binary_view&& other) noexcept :
         address(std::move(other.address)),
         pos(other.pos) {}
@@ -244,6 +240,16 @@ public:
             pos = other.pos;
         }
         return *this;
+    }
+    binary_view(const binary_view& other) = default;
+    binary_view& operator=(const binary_view& other) = default;
+    ~binary_view() = default;
+
+    binary_view(const std::byte* src, const size_t start = 0) {
+        load(src, start);
+    }
+    binary_view(const binary& binary, const size_t start = 0) {
+        load(binary, start);
     }
 
     enum error_status {
