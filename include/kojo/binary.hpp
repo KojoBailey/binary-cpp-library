@@ -132,7 +132,7 @@ public:
     const std::byte* data() const {
         return storage.data();
     }
-    bool empty() const {
+    bool is_empty() const {
         return storage.empty();
     }
 
