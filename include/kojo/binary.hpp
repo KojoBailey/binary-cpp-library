@@ -314,6 +314,9 @@ public:
     const std::byte* data() const {
         return address;
     }
+    bool is_empty() const {
+        return address == nullptr;
+    }
 
     size_t get_pos() const {
         return pos;
