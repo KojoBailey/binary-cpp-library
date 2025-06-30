@@ -276,7 +276,7 @@ public:
             return 0;
         }
         std::memcpy(&buffer, &address[pos + offset], sizeof(buffer));
-        buffer = set_endian(buffer, endianness);
+        buffer = binary::set_endian(buffer, endianness);
         if (offset == 0)
             pos += sizeof(buffer);
         return buffer;
