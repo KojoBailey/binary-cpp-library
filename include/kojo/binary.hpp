@@ -42,11 +42,11 @@ class binary {
 public:
     binary() = default;
     binary(binary&& other) noexcept :
-        storage(std::move(other.storage)),
+        m_storage(std::move(other.m_storage)),
         pos(other.pos) {}
     binary& operator=(binary&& other) noexcept {
         if (this != &other) {
-            storage = std::move(other.storage);
+            m_storage = std::move(other.m_storage);
             pos = other.pos;
         }
         return *this;
@@ -92,15 +92,15 @@ public:
 
     template<std::integral T> void write(T value, std::endian endianness) {
         value = set_endian(value, endianness);
-        if (pos + sizeof(T) > storage->size())
-            storage->resize(pos + sizeof(T));
-        std::memcpy(&storage[pos], &value, sizeof(T));
+        if (pos + sizeof(T) > m_storage->size())
+            m_storage->resize(pos + sizeof(T));
+        std::memcpy(&m_storage[pos], &value, sizeof(T));
         pos += sizeof(T);
     }
     template<std::same_as<std::byte> T> void write(const T value) {
-        if (pos + 1 > storage->size())
-            storage->resize(pos + 1);
-        std::memcpy(&storage[pos], &value, 1);
+        if (pos + 1 > m_storage->size())
+            m_storage->resize(pos + 1);
+        std::memcpy(&m_storage[pos], &value, 1);
         pos++;
     }
     template<std::same_as<std::string_view> T> void write(const T value, size_t length = 0) {
@@ -114,30 +114,33 @@ public:
         }
 
         // Write string to memory.
-        if (pos + length + padding > storage->size())
-            storage->resize(pos + length + padding);
-        std::memcpy(&storage[pos], value.data(), length);
+        if (pos + length + padding > m_storage->size())
+            m_storage->resize(pos + length + padding);
+        std::memcpy(&m_storage[pos], value.data(), length);
         pos += length;
 
         // Write any padding.
         constexpr char zero = '\0';
         for (size_t i = 0; i < padding; i++) {
-            std::memcpy(&storage[pos++], &zero, 1);
+            std::memcpy(&m_storage[pos++], &zero, 1);
         }
     }
 
     size_t size() const {
-        return storage->size();
+        return m_storage->size();
+    }
+    const std::shared_ptr<std::vector<std::byte>> storage() const {
+        return m_storage;
     }
     const std::byte* data() const {
-        return storage->data();
+        return m_storage->data();
     }
     bool is_empty() const {
-        return storage->empty();
+        return m_storage->empty();
     }
 
     void go_to_end() {
-        pos = storage->size();
+        pos = m_storage->size();
     }
     size_t get_pos() const {
         return pos;
@@ -154,7 +157,7 @@ public:
 
     void dump_file(std::string output_path) {
         std::ofstream file_output{output_path, std::ios::binary};
-        for (std::byte byte : *storage)
+        for (std::byte byte : *m_storage)
             file_output << static_cast<char>(byte);
         file_output.close();
     }
@@ -168,7 +171,7 @@ public:
 
 private:
     void load_from_path(const std::filesystem::path& path, size_t size = SIZE_MAX, const size_t start = 0) {
-        storage->clear();
+        m_storage->clear();
         pos = 0;
 
         if (!std::filesystem::exists(path)) {
@@ -191,11 +194,11 @@ private:
         }
         file.seekg(start);
         
-        storage->resize(size);
-        file.read(reinterpret_cast<char*>(storage->data()), size);
+        m_storage->resize(size);
+        file.read(reinterpret_cast<char*>(m_storage->data()), size);
 
         if (file.gcount() != size) {
-            storage->resize(file.gcount());
+            m_storage->resize(file.gcount());
             error_status = error_status::INVALID_FILE_SIZE;
             return;
         }
@@ -203,7 +206,7 @@ private:
     }
 
     void load_from_pointer(const std::byte* src, const size_t size, const size_t start = 0) {
-        storage->clear();
+        m_storage->clear();
         pos = 0;
         if (size == 0) return;
         if (src == nullptr) {
@@ -212,18 +215,18 @@ private:
         }
 
         try {
-            storage->resize(size);
+            m_storage->resize(size);
         } catch (const std::bad_alloc&) {
             error_status = error_status::INSUFFICIENT_MEMORY;
             return;
         }
-        std::memcpy(storage->data(), src + start, size);
+        std::memcpy(m_storage->data(), src + start, size);
         error_status = error_status::OK;
     }
 
     error_status error_status{error_status::OK};
 
-    std::shared_ptr<std::vector<std::byte>> storage{std::make_shared<std::vector<std::byte>>()};
+    std::shared_ptr<std::vector<std::byte>> m_storage{std::make_shared<std::vector<std::byte>>()};
     size_t pos{0};
 };
 
