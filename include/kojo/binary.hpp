@@ -92,14 +92,14 @@ public:
 
     template<std::integral T> void write(T value, std::endian endianness) {
         value = set_endian(value, endianness);
-        if (pos + sizeof(T) > storage.size())
-            storage.resize(pos + sizeof(T));
+        if (pos + sizeof(T) > storage->size())
+            storage->resize(pos + sizeof(T));
         std::memcpy(&storage[pos], &value, sizeof(T));
         pos += sizeof(T);
     }
     template<std::same_as<std::byte> T> void write(const T value) {
-        if (pos + 1 > storage.size())
-            storage.resize(pos + 1);
+        if (pos + 1 > storage->size())
+            storage->resize(pos + 1);
         std::memcpy(&storage[pos], &value, 1);
         pos++;
     }
@@ -114,8 +114,8 @@ public:
         }
 
         // Write string to memory.
-        if (pos + length + padding > storage.size())
-            storage.resize(pos + length + padding);
+        if (pos + length + padding > storage->size())
+            storage->resize(pos + length + padding);
         std::memcpy(&storage[pos], value.data(), length);
         pos += length;
 
@@ -127,17 +127,17 @@ public:
     }
 
     size_t size() const {
-        return storage.size();
+        return storage->size();
     }
     const std::byte* data() const {
-        return storage.data();
+        return storage->data();
     }
     bool is_empty() const {
-        return storage.empty();
+        return storage->empty();
     }
 
     void go_to_end() {
-        pos = storage.size();
+        pos = storage->size();
     }
     size_t get_pos() const {
         return pos;
@@ -154,7 +154,7 @@ public:
 
     void dump_file(std::string output_path) {
         std::ofstream file_output{output_path, std::ios::binary};
-        for (std::byte byte : storage)
+        for (std::byte byte : *storage)
             file_output << static_cast<char>(byte);
         file_output.close();
     }
@@ -168,7 +168,7 @@ public:
 
 private:
     void load_from_path(const std::filesystem::path& path, size_t size = SIZE_MAX, const size_t start = 0) {
-        storage.clear();
+        storage->clear();
         pos = 0;
 
         if (!std::filesystem::exists(path)) {
@@ -191,11 +191,11 @@ private:
         }
         file.seekg(start);
         
-        storage.resize(size);
-        file.read(reinterpret_cast<char*>(storage.data()), size);
+        storage->resize(size);
+        file.read(reinterpret_cast<char*>(storage->data()), size);
 
         if (file.gcount() != size) {
-            storage.resize(file.gcount());
+            storage->resize(file.gcount());
             error_status = error_status::INVALID_FILE_SIZE;
             return;
         }
@@ -203,7 +203,7 @@ private:
     }
 
     void load_from_pointer(const std::byte* src, const size_t size, const size_t start = 0) {
-        storage.clear();
+        storage->clear();
         pos = 0;
         if (size == 0) return;
         if (src == nullptr) {
@@ -212,18 +212,18 @@ private:
         }
 
         try {
-            storage.resize(size);
+            storage->resize(size);
         } catch (const std::bad_alloc&) {
             error_status = error_status::INSUFFICIENT_MEMORY;
             return;
         }
-        std::memcpy(storage.data(), src + start, size);
+        std::memcpy(storage->data(), src + start, size);
         error_status = error_status::OK;
     }
 
     error_status error_status{error_status::OK};
 
-    std::vector<std::byte> storage{};
+    std::shared_ptr<std::vector<std::byte>> storage{std::make_shared<std::vector<std::byte>>()};
     size_t pos{0};
 };
 
