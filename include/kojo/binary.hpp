@@ -94,13 +94,13 @@ public:
         value = set_endian(value, endianness);
         if (pos + sizeof(T) > m_storage->size())
             m_storage->resize(pos + sizeof(T));
-        std::memcpy(&m_storage[pos], &value, sizeof(T));
+        std::memcpy(&(*m_storage)[pos], &value, sizeof(T));
         pos += sizeof(T);
     }
     template<std::same_as<std::byte> T> void write(const T value) {
         if (pos + 1 > m_storage->size())
             m_storage->resize(pos + 1);
-        std::memcpy(&m_storage[pos], &value, 1);
+        std::memcpy(&(*m_storage)[pos], &value, 1);
         pos++;
     }
     template<std::same_as<std::string_view> T> void write(const T value, size_t length = 0) {
@@ -116,13 +116,13 @@ public:
         // Write string to memory.
         if (pos + length + padding > m_storage->size())
             m_storage->resize(pos + length + padding);
-        std::memcpy(&m_storage[pos], value.data(), length);
+        std::memcpy(&(*m_storage)[pos], value.data(), length);
         pos += length;
 
         // Write any padding.
         constexpr char zero = '\0';
         for (size_t i = 0; i < padding; i++) {
-            std::memcpy(&m_storage[pos++], &zero, 1);
+            std::memcpy(&(*m_storage)[pos++], &zero, 1);
         }
     }
 
@@ -155,11 +155,10 @@ public:
         pos += bytes - ( (pos - 1) % bytes ) - 1;
     }
 
-    void dump_file(std::string output_path) {
+    void dump_file(std::string output_path) const {
         std::ofstream file_output{output_path, std::ios::binary};
         for (std::byte byte : *m_storage)
             file_output << static_cast<char>(byte);
-        file_output.close();
     }
 
     template <typename T> static T set_endian(T value, std::endian endianness) {
