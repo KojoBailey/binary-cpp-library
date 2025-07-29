@@ -155,7 +155,7 @@ public:
         pos += bytes - ( (pos - 1) % bytes ) - 1;
     }
 
-    void dump_file(std::string output_path) const {
+    void dump_file(std::string_view output_path) const {
         std::ofstream file_output{output_path, std::ios::binary};
         for (std::byte byte : *m_storage)
             file_output << static_cast<char>(byte);
