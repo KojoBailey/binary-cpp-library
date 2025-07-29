@@ -1,6 +1,7 @@
 #ifndef KOJO_BINARY_LIB
 #define KOJO_BINARY_LIB
 
+#include <algorithm>
 #include <bit>
 #include <cstdint>
 #include <cstring>
@@ -8,15 +9,6 @@
 #include <fstream>
 #include <string_view>
 #include <vector>
-
-#ifdef KOJO_BINARY_LIB_DEBUG
-    #include <iostream>
-    #include <format>
-    #include <cassert>
-    #define ASSERT(exp, msg) assert((void(msg), exp))
-#else
-    #define ASSERT(exp, msg)
-#endif
 
 /** Kojo Bailey */
 namespace kojo {
@@ -36,6 +28,19 @@ namespace binary_types {
     using f64 = _Float64;
     using str = std::string;        // Stores its own copy of a string.
     using sv  = std::string_view;   // Accesses a string without copying it.
+}
+
+namespace util {
+    template<std::integral T>
+    constexpr T byteswap(T value) noexcept {
+        static_assert(std::has_unique_object_representations_v<T>, "T may not have padding bits");
+        std::uint8_t buffer[sizeof(T)];
+        std::memcpy(buffer, &value, sizeof(T));
+        std::ranges::reverse(buffer);
+        T result;
+        std::memcpy(&result, buffer, sizeof(T));
+        return result;
+    }
 }
 
 class binary {
@@ -164,7 +169,7 @@ public:
     template <typename T> static T set_endian(T value, std::endian endianness) {
         static_assert(std::is_integral<T>::value, "T must be an integral type.");
         return (std::endian::native != endianness)
-            ? std::byteswap(value)
+            ? util::byteswap(value)
             : value;
     }
 
