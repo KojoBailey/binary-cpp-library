@@ -60,13 +60,13 @@ public:
     binary& operator=(const binary& other) = default;
     ~binary() = default;
 
-    binary(const std::filesystem::path& path, size_t size = SIZE_MAX, const size_t start = 0) {
+    explicit binary(const std::filesystem::path& path, std::streamsize size = SIZE_MAX, const std::streamoff start = 0) {
         load_from_path(path, size, start);
     }
     binary(const std::byte* src, const size_t size, const size_t start = 0) {
         load_from_pointer(src, size, start);
     }
-    binary(const std::vector<std::byte>& vec, const size_t size = 0, const size_t start = 0) {
+    explicit binary(const std::vector<std::byte>& vec, const size_t size = 0, const size_t start = 0) {
         size_t true_size = (size == 0) ? vec.size() : size;
         load_from_pointer(vec.data(), true_size, start);
     }
@@ -80,11 +80,11 @@ public:
         NULL_POINTER,           // Pointer argument is null and cannot be used.
         INSUFFICIENT_MEMORY,    // Ran out of memory while trying to resize.
     };
-    error_status get_error_status() const {
+    [[nodiscard]] error_status get_error_status() const {
         return error_status;
     }
 
-    void load(const std::filesystem::path& path, size_t size = SIZE_MAX, const size_t start = 0) {
+    void load(const std::filesystem::path& path, std::streamsize size = SIZE_MAX, const std::streamoff start = 0) {
         load_from_path(path, size, start);
     }
     void load(const std::byte* src, const size_t size, const size_t start = 0) {
@@ -131,27 +131,27 @@ public:
         }
     }
 
-    size_t size() const {
+    [[nodiscard]] size_t size() const {
         return m_storage->size();
     }
-    const std::shared_ptr<std::vector<std::byte>> storage() const {
+    [[nodiscard]] std::shared_ptr<std::vector<std::byte>> storage() const {
         return m_storage;
     }
-    const std::byte* data() const {
+    [[nodiscard]] const std::byte* data() const {
         return m_storage->data();
     }
-    bool is_empty() const {
+    [[nodiscard]] bool is_empty() const {
         return m_storage->empty();
     }
 
     void go_to_end() {
         pos = m_storage->size();
     }
-    size_t get_pos() const {
+    [[nodiscard]] size_t get_pos() const {
         return pos;
     }
-    void set_pos(size_t pos) {
-        pos = pos;
+    void set_pos(size_t _pos) {
+        pos = _pos;
     }
     void change_pos(size_t offset) {
         pos += offset;
@@ -160,21 +160,21 @@ public:
         pos += bytes - ( (pos - 1) % bytes ) - 1;
     }
 
-    void dump_file(std::filesystem::path output_path) const {
+    void dump_file(const std::filesystem::path& output_path) const {
         std::ofstream file_output{output_path, std::ios::binary};
         for (std::byte byte : *m_storage)
             file_output << static_cast<char>(byte);
     }
 
     template <typename T> static T set_endian(T value, std::endian endianness) {
-        static_assert(std::is_integral<T>::value, "T must be an integral type.");
+        static_assert(std::is_integral_v<T>, "T must be an integral type.");
         return (std::endian::native != endianness)
             ? util::byteswap(value)
             : value;
     }
 
 private:
-    void load_from_path(const std::filesystem::path& path, size_t size = SIZE_MAX, const size_t start = 0) {
+    void load_from_path(const std::filesystem::path& path, std::streamsize size = SIZE_MAX, const std::streamoff start = 0) {
         m_storage->clear();
         pos = 0;
 
@@ -194,7 +194,7 @@ private:
 
         if (size == SIZE_MAX) {
             file.seekg(0, std::ios::end);
-            size = static_cast<size_t>(file.tellg()) - start;
+            size = file.tellg() - start;
         }
         file.seekg(start);
         
@@ -238,12 +238,12 @@ class binary_view {
 public:
     binary_view() = default;
     binary_view(binary_view&& other) noexcept :
-        address(std::move(other.address)),
+        address(other.address),
         pos(other.pos) {}
 
     binary_view& operator=(binary_view&& other) noexcept {
         if (this != &other) {
-            address = std::move(other.address);
+            address = other.address;
             pos = other.pos;
         }
         return *this;
@@ -252,10 +252,10 @@ public:
     binary_view& operator=(const binary_view& other) = default;
     ~binary_view() = default;
 
-    binary_view(const std::byte* src, const size_t start = 0) {
+    explicit binary_view(const std::byte* src, const size_t start = 0) {
         load(src, start);
     }
-    binary_view(const binary& binary, const size_t start = 0) {
+    explicit binary_view(const binary& binary, const size_t start = 0) {
         load(binary, start);
     }
 
@@ -263,7 +263,7 @@ public:
         OK = 0,
         NULL_MEMORY,         // Attempted to read from null/out-of-bounds memory.
     };
-    error_status get_error_status() const {
+    [[nodiscard]] error_status get_error_status() const {
         return error_status;
     }
 
@@ -318,18 +318,18 @@ public:
         return buffer;
     }
 
-    const std::byte* data() const {
+    [[nodiscard]] const std::byte* data() const {
         return address;
     }
-    bool is_empty() const {
+    [[nodiscard]] bool is_empty() const {
         return address == nullptr;
     }
 
-    size_t get_pos() const {
+    [[nodiscard]] size_t get_pos() const {
         return pos;
     }
-    void set_pos(size_t pos) {
-        pos = pos;
+    void set_pos(size_t _pos) {
+        pos = _pos;
     }
     void change_pos(size_t offset) {
         pos += offset;
