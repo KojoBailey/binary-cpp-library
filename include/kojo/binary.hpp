@@ -347,4 +347,4 @@ private:
 
 }
 
-#endif // KOJO_BINARY_LIB
+#endif

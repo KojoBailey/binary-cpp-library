@@ -2,7 +2,9 @@ cmake_minimum_required(VERSION 3.19)
 project(binary VERSION 0.1.0 DESCRIPTION "C++ Binary lib")
 set(CMAKE_CXX_STANDARD 20)
 
-add_library(binary INTERFACE)
+add_library(binary INTERFACE
+        include/kojo/binary.hpp
+)
 
 target_include_directories(binary
     INTERFACE
