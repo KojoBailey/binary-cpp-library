@@ -1,3 +1,11 @@
+# CMake
+cmake-build-debug/
+
+# IDE
+.vscode/
+.idea/
+
+# Testing
 test.cpp
 test.exe
 test_file.bin
