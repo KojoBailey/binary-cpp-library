@@ -252,10 +252,10 @@ public:
     binary_view& operator=(const binary_view& other) = default;
     ~binary_view() = default;
 
-    explicit binary_view(const std::byte* src, const size_t start = 0) {
+    binary_view(const std::byte* src, const size_t start = 0) {
         load(src, start);
     }
-    explicit binary_view(const binary& binary, const size_t start = 0) {
+    binary_view(const binary& binary, const size_t start = 0) {
         load(binary, start);
     }
 
