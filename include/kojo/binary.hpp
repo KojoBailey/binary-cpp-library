@@ -60,13 +60,13 @@ public:
     binary& operator=(const binary& other) = default;
     ~binary() = default;
 
-    explicit binary(const std::filesystem::path& path, std::streamsize size = SIZE_MAX, const std::streamoff start = 0) {
+    binary(const std::filesystem::path& path, std::streamsize size = SIZE_MAX, const std::streamoff start = 0) {
         load_from_path(path, size, start);
     }
     binary(const std::byte* src, const size_t size, const size_t start = 0) {
         load_from_pointer(src, size, start);
     }
-    explicit binary(const std::vector<std::byte>& vec, const size_t size = 0, const size_t start = 0) {
+    binary(const std::vector<std::byte>& vec, const size_t size = 0, const size_t start = 0) {
         size_t true_size = (size == 0) ? vec.size() : size;
         load_from_pointer(vec.data(), true_size, start);
     }
@@ -252,10 +252,10 @@ public:
     binary_view& operator=(const binary_view& other) = default;
     ~binary_view() = default;
 
-    explicit binary_view(const std::byte* src, const size_t start = 0) {
+    binary_view(const std::byte* src, const size_t start = 0) {
         load(src, start);
     }
-    explicit binary_view(const binary& binary, const size_t start = 0) {
+    binary_view(const binary& binary, const size_t start = 0) {
         load(binary, start);
     }
 
