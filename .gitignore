@@ -1,15 +1,9 @@
 # CMake
 build/
-cmake-build-debug/
-cmake_install.cmake
-binaryTargets.cmake
 
 # IDE
 .vscode/
 .idea/
 
 # Testing
-test.cpp
-test.exe
-test_file.bin
-test_output.bin
+test/
