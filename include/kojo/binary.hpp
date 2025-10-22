@@ -10,8 +10,7 @@
 #include <string_view>
 #include <vector>
 
-/* Kojo Bailey */
-namespace kojo {
+namespace kojo { /* Kojo Bailey */
 
 namespace binary_types {
 	using std::byte;
