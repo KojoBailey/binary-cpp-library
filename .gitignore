@@ -1,6 +1,8 @@
 # CMake
 build/
 cmake-build-debug/
+cmake_install.cmake
+binaryTargets.cmake
 
 # IDE
 .vscode/
