@@ -60,13 +60,13 @@ public:
 
 	binary(binary&& other) noexcept :
 		m_storage(std::move(other.m_storage)),
-		pos(other.pos) {}
+		m_pos(other.m_pos) {}
 
 	binary& operator=(binary&& other) noexcept
 	{
 		if (this != &other) {
 			m_storage = std::move(other.m_storage);
-			pos = other.pos;
+			m_pos = other.m_pos;
 		}
 
 		return *this;
@@ -83,33 +83,46 @@ public:
 		NULL_POINTER,           // Pointer argument is null and cannot be used.
 		INSUFFICIENT_MEMORY,    // Ran out of memory while trying to resize.
 	};
-	
+
 /*~ Loading */
 	
-	static auto load(const std::filesystem::path& path, std::streamsize size = SIZE_MAX, const std::streamoff start = 0)
-		-> std::expected<binary, error_status>
+	static auto load(
+		const std::filesystem::path& file_path,
+		std::streamsize size = SIZE_MAX,
+		const std::streamoff start_pos = 0
+	) -> std::expected<binary, error_status>
 	{
 		binary result;
-		if (auto check = result.load_from_path(path, size, start); !check) {
+		if (auto check = result.load_file_path(file_path, size, start_pos); !check) {
 			return std::unexpected{check.error()};
 		}
 		return result;
 	}
 
-	static auto load(const std::byte* src, const size_t size, const size_t start = 0)
-		-> std::expected<binary, error_status>
+	static auto load(
+		const std::byte* byte_stream,
+		const std::streamsize size,
+		const std::streamoff start_pos = 0
+	) -> std::expected<binary, error_status>
 	{
 		binary result;
-		result.load_from_pointer(src, size, start);
+		if (auto check = result.load_byte_stream(byte_stream, size, start_pos); !check) {
+			return std::unexpected{check.error()};
+		}
 		return result;
 	}
 
-	static auto load(const std::vector<std::byte>& vec, const size_t size = 0, const size_t start = 0)
-		-> std::expected<binary, error_status>
+	static auto load(
+		const std::vector<std::byte>& vec,
+		const std::streamsize size = SIZE_MAX,
+		const std::streamoff start_pos = 0
+	) -> std::expected<binary, error_status>
 	{
 		binary result;
-		size_t true_size = (size == 0) ? vec.size() : size;
-		result.load_from_pointer(vec.data(), true_size, start);
+		std::streamsize true_size = (size == SIZE_MAX) ? vec.size() : size;
+		if (auto check = result.load_byte_stream(vec.data(), true_size, start_pos); !check) {
+			return std::unexpected{check.error()};
+		}
 		return result;
 	}
 
@@ -118,18 +131,18 @@ public:
 	template<std::integral T> void write(T value, std::endian endianness)
 	{
 		value = set_endian(value, endianness);
-		if (pos + sizeof(T) > m_storage->size())
-			m_storage->resize(pos + sizeof(T));
-		std::memcpy(&(*m_storage)[pos], &value, sizeof(T));
-		pos += sizeof(T);
+		if (m_pos + sizeof(T) > m_storage->size())
+			m_storage->resize(m_pos + sizeof(T));
+		std::memcpy(&(*m_storage)[m_pos], &value, sizeof(T));
+		m_pos += sizeof(T);
 	}
 
 	template<std::same_as<std::byte> T> void write(const T value)
 	{
-		if (pos + 1 > m_storage->size())
-			m_storage->resize(pos + 1);
-		std::memcpy(&(*m_storage)[pos], &value, 1);
-		pos++;
+		if (m_pos + 1 > m_storage->size())
+			m_storage->resize(m_pos + 1);
+		std::memcpy(&(*m_storage)[m_pos], &value, 1);
+		m_pos++;
 	}
 
 	template<std::same_as<std::string_view> T> void write(const T value, size_t length = 0)
@@ -144,15 +157,15 @@ public:
 		}
 
 		// Write string to memory.
-		if (pos + length + padding > m_storage->size())
-			m_storage->resize(pos + length + padding);
-		std::memcpy(&(*m_storage)[pos], value.data(), length);
-		pos += length;
+		if (m_pos + length + padding > m_storage->size())
+			m_storage->resize(m_pos + length + padding);
+		std::memcpy(&(*m_storage)[m_pos], value.data(), length);
+		m_pos += length;
 
 		// Write any padding.
 		constexpr char zero = '\0';
 		for (size_t i = 0; i < padding; i++) {
-			std::memcpy(&(*m_storage)[pos++], &zero, 1);
+			std::memcpy(&(*m_storage)[m_pos++], &zero, 1);
 		}
 	}
 
@@ -197,93 +210,106 @@ public:
 
 	void go_to_end()
 	{
-		pos = m_storage->size();
+		m_pos = m_storage->size();
 	}
 
 	[[nodiscard]] size_t get_pos() const
 	{
-		return pos;
+		return m_pos;
 	}
 
 	void set_pos(size_t _pos)
 	{
-		pos = _pos;
+		m_pos = _pos;
 	}
 
 	void change_pos(size_t offset)
 	{
-		pos += offset;
+		m_pos += offset;
 	}
 
 	void align_by(size_t bytes)
 	{
-		pos += bytes - ( (pos - 1) % bytes ) - 1;
+		m_pos += bytes - ( (m_pos - 1) % bytes ) - 1;
 	}
 
 private:
-	auto load_from_path(
-		const std::filesystem::path& path,
+	auto load_file_path(
+		const std::filesystem::path& file_path,
 		std::streamsize size = SIZE_MAX,
-		const std::streamoff start = 0
+		const std::streamoff start_pos = 0
 	) -> std::expected<void, error_status>
 	{
-		m_storage->clear();
-		pos = 0;
-
-		if (!std::filesystem::exists(path)) {
+		if (!std::filesystem::exists(file_path)) {
 			return std::unexpected{error_status::FILE_NOT_EXIST};
 		}
 
-		if (!std::filesystem::is_regular_file(path)) {
+		if (!std::filesystem::is_regular_file(file_path)) {
 			return std::unexpected{error_status::INVALID_FILE};
 		}
 		
-		std::ifstream file{path, std::ios::binary};
+		std::ifstream file{file_path, std::ios::binary};
 		if (!file.is_open()) {
 			return std::unexpected{error_status::FILE_NOT_OPEN};
 		}
 
+		m_storage->clear();
+		m_pos = 0;
+
+		if (size == 0) {
+			return {};
+		}
+
 		if (size == SIZE_MAX) {
 			file.seekg(0, std::ios::end);
-			size = file.tellg() - start;
+			size = file.tellg() - start_pos;
 		}
-		file.seekg(start);
+		file.seekg(start_pos);
 
-		m_storage->resize(size);
+		try {
+			m_storage->resize(size);
+		} catch (const std::bad_alloc&) {
+			return std::unexpected{error_status::INSUFFICIENT_MEMORY};
+		}
 		file.read(reinterpret_cast<char*>(m_storage->data()), size);
 
-		if (file.gcount() != size) {
-			m_storage->resize(file.gcount());
-			return std::unexpected{error_status::INVALID_FILE_SIZE};
+		const std::streamsize actual_file_size  = file.gcount();
+		if (actual_file_size != size) {
+			m_storage->resize(actual_file_size);
 		}
 
 		return {};
 	}
 
-	void load_from_pointer(const std::byte* src, const size_t size, const size_t start = 0)
+	auto load_byte_stream(	
+		const std::byte* byte_stream,
+		const std::streamsize size,
+		const std::streamoff start_pos = 0
+	) -> std::expected<binary, error_status>
 	{
+		if (!byte_stream) {
+			return std::unexpected{error_status::NULL_POINTER};
+		}
+
 		m_storage->clear();
-		pos = 0;
-		if (size == 0) return;
-		if (src == nullptr) {
-			error_status = error_status::NULL_POINTER;
-			return;
+		m_pos = 0;
+
+		if (size == 0) {
+			return {};
 		}
 
 		try {
 			m_storage->resize(size);
 		} catch (const std::bad_alloc&) {
-			error_status = error_status::INSUFFICIENT_MEMORY;
-			return;
+			return std::unexpected{error_status::INSUFFICIENT_MEMORY};
 		}
-		std::memcpy(m_storage->data(), src + start, size);
-		error_status = error_status::OK;
+		std::memcpy(m_storage->data(), byte_stream + start_pos, size);
+
+		return {};
 	}
 
-    	error_status error_status{error_status::OK};
-
 	std::shared_ptr<std::vector<std::byte>> m_storage{std::make_shared<std::vector<std::byte>>()};
-	size_t pos{0};
+	size_t m_pos{0};
 };
 
 class binary_view {
@@ -299,13 +325,13 @@ public:
 
 	binary_view(binary_view&& other) noexcept :
 		address(other.address),
-		pos(other.pos) {}
+		m_pos(other.m_pos) {}
 
 	binary_view& operator=(binary_view&& other) noexcept
 	{
 		if (this != &other) {
 		address = other.address;
-		pos = other.pos;
+		m_pos = other.m_pos;
 		}
 		return *this;
 	}
@@ -337,12 +363,12 @@ public:
 	void load(const std::byte* src, const size_t start = 0)
 	{
 		address = &src[start];
-		pos = 0;
+		m_pos = 0;
 	}
 	void load(const binary& binary, const size_t start = 0)
 	{
 		address = &binary.data()[start];
-		pos = 0;
+		m_pos = 0;
 	}
 
 /*~ Reading */
@@ -350,50 +376,50 @@ public:
 	template<std::integral T> T read(std::endian endianness, size_t offset = 0)
 	{
 		T buffer;
-		if (&address[pos + offset] == nullptr) {
+		if (&address[m_pos + offset] == nullptr) {
 		error_status = error_status::NULL_MEMORY;
 		return 0;
 		}
-		std::memcpy(&buffer, &address[pos + offset], sizeof(buffer));
+		std::memcpy(&buffer, &address[m_pos + offset], sizeof(buffer));
 		buffer = binary::set_endian(buffer, endianness);
 		if (offset == 0)
-		pos += sizeof(buffer);
+		m_pos += sizeof(buffer);
 		return buffer;
 	}
 
 	template<std::same_as<std::byte> T> T read(size_t offset = 0)
 	{
-		std::byte buffer = address[pos + offset];
+		std::byte buffer = address[m_pos + offset];
 		if (offset == 0)
-		pos++;
+		m_pos++;
 		return buffer;
 	}
 
 	// Strings of explicit length (copy).
 	template<std::same_as<std::string> T> T read(size_t size, size_t offset = 0)
 	{
-		std::string buffer = reinterpret_cast<const char*>(&address[pos + offset]);
+		std::string buffer = reinterpret_cast<const char*>(&address[m_pos + offset]);
 		buffer = buffer.substr(0, size);
 		if (offset == 0)
-		pos += size;
+		m_pos += size;
 		return buffer;
 	}
 
 	// Null-terminated strings (reference).
 	template<std::same_as<std::string_view> T> T read(size_t offset = 0)
 	{
-		std::string_view buffer = reinterpret_cast<const char*>(&address[pos + offset]);
+		std::string_view buffer = reinterpret_cast<const char*>(&address[m_pos + offset]);
 		if (offset == 0)
-		pos += buffer.size() + 1;
+		m_pos += buffer.size() + 1;
 		return buffer;
 	}
 
 	template<typename T> T read_struct(size_t offset = 0)
 	{
 		T buffer;
-		std::memcpy(&buffer, &address[pos + offset], sizeof(buffer));
+		std::memcpy(&buffer, &address[m_pos + offset], sizeof(buffer));
 		if (offset == 0)
-		pos += sizeof(buffer);
+		m_pos += sizeof(buffer);
 		return buffer;
 	}
 
@@ -413,29 +439,29 @@ public:
 
 	[[nodiscard]] size_t get_pos() const
 	{
-		return pos;
+		return m_pos;
 	}
 
 	void set_pos(size_t _pos)
 	{
-		pos = _pos;
+		m_pos = _pos;
 	}
 
 	void change_pos(size_t offset)
 	{
-		pos += offset;
+		m_pos += offset;
 	}
 
 	void align_by(size_t bytes)
 	{
-		pos += bytes - ( (pos - 1) % bytes ) - 1;
+		m_pos += bytes - ( (m_pos - 1) % bytes ) - 1;
 	}
 
 private:
 	error_status error_status{error_status::OK};
 
 	const std::byte* address{nullptr};
-	size_t pos{0};
+	size_t m_pos{0};
 };
 
 }
