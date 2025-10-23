@@ -83,11 +83,7 @@ public:
 		NULL_POINTER,           // Pointer argument is null and cannot be used.
 		INSUFFICIENT_MEMORY,    // Ran out of memory while trying to resize.
 	};
-
-	[[nodiscard]] error_status get_error_status() const {
-		return error_status;
-	}
-
+	
 /*~ Loading */
 	
 	static auto load(const std::filesystem::path& path, std::streamsize size = SIZE_MAX, const std::streamoff start = 0)
