@@ -128,24 +128,16 @@ public:
 
 /*~ Writing */
 
-	template<std::integral T> void write(T value, std::endian endianness)
+	void write(const std::byte value)
 	{
-		value = set_endian(value, endianness);
-		if (m_pos + sizeof(T) > m_storage->size())
-			m_storage->resize(m_pos + sizeof(T));
-		std::memcpy(&(*m_storage)[m_pos], &value, sizeof(T));
-		m_pos += sizeof(T);
-	}
-
-	template<std::same_as<std::byte> T> void write(const T value)
-	{
-		if (m_pos + 1 > m_storage->size())
+		if (m_pos + 1 > m_storage->size()) {
 			m_storage->resize(m_pos + 1);
+		}
 		std::memcpy(&(*m_storage)[m_pos], &value, 1);
 		m_pos++;
 	}
 
-	template<std::same_as<std::string_view> T> void write(const T value, size_t length = 0)
+	void write(std::string_view value, size_t length = 0)
 	{
 		// Determine length and padding.
 		if (value.size() == 0) return;
@@ -167,6 +159,19 @@ public:
 		for (size_t i = 0; i < padding; i++) {
 			std::memcpy(&(*m_storage)[m_pos++], &zero, 1);
 		}
+	}
+
+	template<std::integral T>
+	void write(T value, std::endian endianness)
+	{
+		const size_t value_size = sizeof(T);
+		if (m_pos + value_size > m_storage->size()) {
+			m_storage->resize(m_pos + value_size);
+		}
+
+		value = set_endian(value, endianness);
+		std::memcpy(&(*m_storage)[m_pos], &value, value_size);
+		m_pos += value_size;
 	}
 
 	void dump_file(const std::filesystem::path& output_path) const
