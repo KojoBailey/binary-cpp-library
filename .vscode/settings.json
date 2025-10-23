@@ -60,6 +60,7 @@
         "variant": "cpp",
         "iostream": "cpp",
         "print": "cpp",
-        "stdfloat": "cpp"
+        "stdfloat": "cpp",
+        "expected": "cpp"
     }
 }

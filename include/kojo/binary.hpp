@@ -5,6 +5,7 @@
 #include <bit>
 #include <cstdint>
 #include <cstring>
+#include <expected>
 #include <filesystem>
 #include <fstream>
 #include <string_view>
@@ -71,22 +72,6 @@ public:
 		return *this;
 	}
 
-	binary(const std::filesystem::path& path, std::streamsize size = SIZE_MAX, const std::streamoff start = 0)
-	{
-		load_from_path(path, size, start);
-	}
-
-	binary(const std::byte* src, const size_t size, const size_t start = 0)
-	{
-		load_from_pointer(src, size, start);
-	}
-
-	binary(const std::vector<std::byte>& vec, const size_t size = 0, const size_t start = 0)
-	{
-		size_t true_size = (size == 0) ? vec.size() : size;
-		load_from_pointer(vec.data(), true_size, start);
-	}
-
 /*~ Error-Handling */
 
 	enum error_status {
@@ -100,25 +85,36 @@ public:
 	};
 
 	[[nodiscard]] error_status get_error_status() const {
-	return error_status;
+		return error_status;
 	}
 
 /*~ Loading */
 	
-	void load(const std::filesystem::path& path, std::streamsize size = SIZE_MAX, const std::streamoff start = 0)
+	static auto load(const std::filesystem::path& path, std::streamsize size = SIZE_MAX, const std::streamoff start = 0)
+		-> std::expected<binary, error_status>
 	{
-		load_from_path(path, size, start);
+		binary result;
+		if (auto check = result.load_from_path(path, size, start); !check) {
+			return std::unexpected{check.error()};
+		}
+		return result;
 	}
 
-	void load(const std::byte* src, const size_t size, const size_t start = 0)
+	static auto load(const std::byte* src, const size_t size, const size_t start = 0)
+		-> std::expected<binary, error_status>
 	{
-		load_from_pointer(src, size, start);
+		binary result;
+		result.load_from_pointer(src, size, start);
+		return result;
 	}
 
-	void load(const std::vector<std::byte>& vec, const size_t size = 0, const size_t start = 0)
+	static auto load(const std::vector<std::byte>& vec, const size_t size = 0, const size_t start = 0)
+		-> std::expected<binary, error_status>
 	{
+		binary result;
 		size_t true_size = (size == 0) ? vec.size() : size;
-		load_from_pointer(vec.data(), true_size, start);
+		result.load_from_pointer(vec.data(), true_size, start);
+		return result;
 	}
 
 /*~ Writing */
@@ -229,23 +225,26 @@ public:
 	}
 
 private:
-	void load_from_path(const std::filesystem::path& path, std::streamsize size = SIZE_MAX, const std::streamoff start = 0)
+	auto load_from_path(
+		const std::filesystem::path& path,
+		std::streamsize size = SIZE_MAX,
+		const std::streamoff start = 0
+	) -> std::expected<void, error_status>
 	{
 		m_storage->clear();
 		pos = 0;
 
 		if (!std::filesystem::exists(path)) {
-			error_status = error_status::FILE_NOT_EXIST;
-			return;
+			return std::unexpected{error_status::FILE_NOT_EXIST};
 		}
+
 		if (!std::filesystem::is_regular_file(path)) {
-			error_status = error_status::INVALID_FILE;
-			return;
+			return std::unexpected{error_status::INVALID_FILE};
 		}
+		
 		std::ifstream file{path, std::ios::binary};
 		if (!file.is_open()) {
-			error_status = error_status::FILE_NOT_OPEN;
-			return;
+			return std::unexpected{error_status::FILE_NOT_OPEN};
 		}
 
 		if (size == SIZE_MAX) {
@@ -259,10 +258,10 @@ private:
 
 		if (file.gcount() != size) {
 			m_storage->resize(file.gcount());
-			error_status = error_status::INVALID_FILE_SIZE;
-			return;
+			return std::unexpected{error_status::INVALID_FILE_SIZE};
 		}
-		error_status = error_status::OK;
+
+		return {};
 	}
 
 	void load_from_pointer(const std::byte* src, const size_t size, const size_t start = 0)
