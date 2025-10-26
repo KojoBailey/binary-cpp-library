@@ -359,11 +359,6 @@ public:
 		NULL_MEMORY,         // Attempted to read from null/out-of-bounds memory.
 	};
 
-	[[nodiscard]] error_status get_error_status() const
-	{
-		return error_status;
-	}
-
 /*~ Loading */
 
 	void load(const std::byte* src, const size_t start = 0)
@@ -379,26 +374,61 @@ public:
 
 /*~ Reading */
 
-	template<std::integral T> T read(std::endian endianness, size_t offset = 0)
+	template<std::integral T>
+	auto peek(std::endian endianness, size_t offset = 0)
+	-> std::expected<T, error_status>
 	{
-		T buffer;
-		if (&address[m_pos + offset] == nullptr) {
-		error_status = error_status::NULL_MEMORY;
-		return 0;
+		const size_t target_pos = m_pos + offset;
+
+		if (out_of_bounds(target_pos)) {
+			return std::unexpected{error_status::NULL_MEMORY};
 		}
-		std::memcpy(&buffer, &address[m_pos + offset], sizeof(buffer));
-		buffer = binary::set_endian(buffer, endianness);
-		if (offset == 0)
-		m_pos += sizeof(buffer);
+
+		T result;
+		std::memcpy(&result, &address[target_pos], sizeof(result));
+		result = binary::set_endian(result, endianness);
+		return result;
+	}
+
+	template<std::same_as<std::byte> T>
+	auto peek(size_t offset = 0)
+	-> std::expected<T, error_status>
+	{
+		const size_t target_pos = m_pos + offset;
+
+		if (out_of_bounds(target_pos)) {
+			return std::unexpected{error_status::NULL_MEMORY};
+		}
+
+		std::byte buffer = address[target_pos];
 		return buffer;
 	}
 
-	template<std::same_as<std::byte> T> T read(size_t offset = 0)
+	template<std::integral T>
+	auto read(std::endian endianness)
+	-> std::expected<T, error_status>
 	{
-		std::byte buffer = address[m_pos + offset];
-		if (offset == 0)
+		auto result = peek<T>(endianness);
+
+		if (!result) {
+			return result.error();
+		}
+
+		m_pos += sizeof(T);
+		return *result;
+	}
+
+	template<std::same_as<std::byte> T>
+	T read(size_t offset = 0)
+	{
+		auto result = peek<T>();
+
+		if (!result) {
+			return result.error();
+		}
+
 		m_pos++;
-		return buffer;
+		return *result;
 	}
 
 	// Strings of explicit length (copy).
@@ -407,7 +437,7 @@ public:
 		std::string buffer = reinterpret_cast<const char*>(&address[m_pos + offset]);
 		buffer = buffer.substr(0, size);
 		if (offset == 0)
-		m_pos += size;
+			m_pos += size;
 		return buffer;
 	}
 
@@ -416,7 +446,7 @@ public:
 	{
 		std::string_view buffer = reinterpret_cast<const char*>(&address[m_pos + offset]);
 		if (offset == 0)
-		m_pos += buffer.size() + 1;
+			m_pos += buffer.size() + 1;
 		return buffer;
 	}
 
@@ -425,7 +455,7 @@ public:
 		T buffer;
 		std::memcpy(&buffer, &address[m_pos + offset], sizeof(buffer));
 		if (offset == 0)
-		m_pos += sizeof(buffer);
+			m_pos += sizeof(buffer);
 		return buffer;
 	}
 
@@ -464,7 +494,10 @@ public:
 	}
 
 private:
-	error_status error_status{error_status::OK};
+	bool out_of_bounds(std::streampos target_pos)
+	{
+		return &address[target_pos] == nullptr;
+	}
 
 	const std::byte* address{nullptr};
 	size_t m_pos{0};
