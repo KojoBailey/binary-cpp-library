@@ -385,7 +385,7 @@ public:
 		}
 
 		T result;
-		std::memcpy(&result, &address[target_pos], sizeof(result));
+		std::memcpy(&result, &address[target_pos], sizeof(T));
 		result = binary::set_endian(result, endianness);
 		return result;
 	}
@@ -400,8 +400,54 @@ public:
 			return std::unexpected{error_status::NULL_MEMORY};
 		}
 
-		std::byte buffer = address[target_pos];
-		return buffer;
+		std::byte result = address[target_pos];
+		return result;
+	}
+
+	// Strings of explicit length (copy).
+	template<std::same_as<std::string> T>
+	auto peek(size_t size, size_t offset = 0)
+	-> std::expected<T, error_status>
+	{
+		const size_t target_pos = m_pos + offset;
+
+		if (out_of_bounds(target_pos)) {
+			return std::unexpected{error_status::NULL_MEMORY};
+		}
+
+		std::string result = reinterpret_cast<const char*>(&address[target_pos]);
+		result = result.substr(0, size);
+		return result;
+	}
+
+	// Null-terminated strings (reference).
+	template<std::same_as<std::string_view> T>
+	auto peek(size_t offset = 0)
+	-> std::expected<T, error_status>
+	{
+		const size_t target_pos = m_pos + offset;
+
+		if (out_of_bounds(target_pos)) {
+			return std::unexpected{error_status::NULL_MEMORY};
+		}
+
+		std::string_view result = reinterpret_cast<const char*>(&address[target_pos]);
+		return result;
+	}
+
+	template<typename T>
+	auto peek_struct(size_t offset = 0)
+	-> std::expected<T, error_status>
+	{
+		const size_t target_pos = m_pos + offset;
+
+		if (out_of_bounds(target_pos)) {
+			return std::unexpected{error_status::NULL_MEMORY};
+		}
+
+		T result;
+		std::memcpy(&result, &address[target_pos], sizeof(T));
+		return result;
 	}
 
 	template<std::integral T>
@@ -411,7 +457,7 @@ public:
 		auto result = peek<T>(endianness);
 
 		if (!result) {
-			return result.error();
+			return std::unexpected{result.error()};
 		}
 
 		m_pos += sizeof(T);
@@ -419,12 +465,13 @@ public:
 	}
 
 	template<std::same_as<std::byte> T>
-	T read(size_t offset = 0)
+	auto read(size_t offset = 0)
+	-> std::expected<T, error_status>
 	{
 		auto result = peek<T>();
 
 		if (!result) {
-			return result.error();
+			return std::unexpected{result.error()};
 		}
 
 		m_pos++;
@@ -432,31 +479,47 @@ public:
 	}
 
 	// Strings of explicit length (copy).
-	template<std::same_as<std::string> T> T read(size_t size, size_t offset = 0)
+	template<std::same_as<std::string> T>
+	auto read(size_t size)
+	-> std::expected<T, error_status>
 	{
-		std::string buffer = reinterpret_cast<const char*>(&address[m_pos + offset]);
-		buffer = buffer.substr(0, size);
-		if (offset == 0)
-			m_pos += size;
-		return buffer;
+		auto result = peek<std::string>(size);
+
+		if (!result) {
+			return std::unexpected{result.error()};
+		}
+
+		m_pos += size;
+		return *result;
 	}
 
 	// Null-terminated strings (reference).
-	template<std::same_as<std::string_view> T> T read(size_t offset = 0)
+	template<std::same_as<std::string_view> T>
+	auto read()
+	-> std::expected<T, error_status>
 	{
-		std::string_view buffer = reinterpret_cast<const char*>(&address[m_pos + offset]);
-		if (offset == 0)
-			m_pos += buffer.size() + 1;
-		return buffer;
+		auto result = peek<std::string_view>();
+
+		if (!result) {
+			return std::unexpected{result.error()};
+		}
+
+		m_pos += (*result).size() + 1;
+		return *result;
 	}
 
-	template<typename T> T read_struct(size_t offset = 0)
+	template<typename T>
+	auto read_struct()
+	-> std::expected<T, error_status>
 	{
-		T buffer;
-		std::memcpy(&buffer, &address[m_pos + offset], sizeof(buffer));
-		if (offset == 0)
-			m_pos += sizeof(buffer);
-		return buffer;
+		auto result = peek<T>();
+
+		if (!result) {
+			return std::unexpected{result.error()};
+		}
+
+		m_pos += sizeof(T);
+		return *result;
 	}
 
 /*~ Data */
