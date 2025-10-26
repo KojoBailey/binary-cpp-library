@@ -177,8 +177,9 @@ public:
 	void dump_file(const std::filesystem::path& output_path) const
 	{
 		std::ofstream file_output{output_path, std::ios::binary};
-		for (std::byte byte : *m_storage)
+		for (std::byte byte : *m_storage) {
 			file_output << static_cast<char>(byte);
+		}
 	}
 
 	template <typename T> static T set_endian(T value, std::endian endianness)
@@ -213,11 +214,6 @@ public:
 
 /*~ Positioning */
 
-	void go_to_end()
-	{
-		m_pos = m_storage->size();
-	}
-
 	[[nodiscard]] size_t get_pos() const
 	{
 		return m_pos;
@@ -231,6 +227,11 @@ public:
 	void change_pos(size_t offset)
 	{
 		m_pos += offset;
+	}
+
+	void go_to_end()
+	{
+		m_pos = m_storage->size();
 	}
 
 	void align_by(size_t bytes)
