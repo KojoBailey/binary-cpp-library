@@ -8,6 +8,7 @@
 #include <expected>
 #include <filesystem>
 #include <fstream>
+#include <limits>
 #include <string_view>
 #include <vector>
 
@@ -130,18 +131,19 @@ public:
 
 	void write(const std::byte value)
 	{
-		if (m_pos + 1 > m_storage->size()) {
-			m_storage->resize(m_pos + 1);
+		constexpr std::streamoff value_size = sizeof(std::byte);
+		if (m_pos + value_size > m_storage->size()) {
+			m_storage->resize(m_pos + value_size);
 		}
-		std::memcpy(&(*m_storage)[m_pos], &value, 1);
-		m_pos++;
+		std::memcpy(m_storage->data() + m_pos, &value, value_size);
+		m_pos += value_size;
 	}
 
-	void write(std::string_view value, size_t length = 0)
+	void write(std::string_view value, std::streamsize length = 0)
 	{
 		// Determine length and padding.
 		if (value.size() == 0) return;
-		size_t padding{1};
+		std::streamsize padding{1};
 		if (length == 0) {
 			length = value.size();
 		} else {
@@ -149,28 +151,24 @@ public:
 		}
 
 		// Write string to memory.
-		if (m_pos + length + padding > m_storage->size())
+		if (m_pos + length + padding > m_storage->size()) {
 			m_storage->resize(m_pos + length + padding);
-		std::memcpy(&(*m_storage)[m_pos], value.data(), length);
-		m_pos += length;
-
-		// Write any padding.
-		constexpr char zero = '\0';
-		for (size_t i = 0; i < padding; i++) {
-			std::memcpy(&(*m_storage)[m_pos++], &zero, 1);
 		}
+		std::memcpy(m_storage->data() + m_pos, value.data(), length);
+		std::memset(m_storage->data() + m_pos + length, '\0', padding);
+		m_pos += length + padding;
 	}
 
 	template<std::integral T>
 	void write(T value, std::endian endianness)
 	{
-		const size_t value_size = sizeof(T);
+		constexpr std::streamoff value_size = sizeof(T);
 		if (m_pos + value_size > m_storage->size()) {
 			m_storage->resize(m_pos + value_size);
 		}
 
 		value = set_endian(value, endianness);
-		std::memcpy(&(*m_storage)[m_pos], &value, value_size);
+		std::memcpy(m_storage->data() + m_pos, &value, value_size);
 		m_pos += value_size;
 	}
 
@@ -192,7 +190,7 @@ public:
 
 /*~ Storage */
 
-	[[nodiscard]] size_t size() const
+	[[nodiscard]] std::streamsize size() const
 	{
 		return m_storage->size();
 	}
@@ -214,17 +212,17 @@ public:
 
 /*~ Positioning */
 
-	[[nodiscard]] size_t get_pos() const
+	[[nodiscard]] std::streampos get_pos() const
 	{
 		return m_pos;
 	}
 
-	void set_pos(size_t _pos)
+	void set_pos(std::streampos _pos)
 	{
 		m_pos = _pos;
 	}
 
-	void change_pos(size_t offset)
+	void change_pos(std::streamoff offset)
 	{
 		m_pos += offset;
 	}
@@ -234,9 +232,9 @@ public:
 		m_pos = m_storage->size();
 	}
 
-	void align_by(size_t bytes)
+	void align_by(std::streamoff bytes)
 	{
-		m_pos += bytes - ( (m_pos - 1) % bytes ) - 1;
+		m_pos += bytes - m_pos % bytes;
 	}
 
 private:
@@ -315,7 +313,7 @@ private:
 	}
 
 	std::shared_ptr<std::vector<std::byte>> m_storage{std::make_shared<std::vector<std::byte>>()};
-	size_t m_pos{0};
+	std::streampos m_pos{0};
 };
 
 class binary_view {
@@ -330,24 +328,24 @@ public:
 	~binary_view() = default;
 
 	binary_view(binary_view&& other) noexcept :
-		address(other.address),
+		m_address(other.m_address),
 		m_pos(other.m_pos) {}
 
 	binary_view& operator=(binary_view&& other) noexcept
 	{
 		if (this != &other) {
-		address = other.address;
+		m_address = other.m_address;
 		m_pos = other.m_pos;
 		}
 		return *this;
 	}
 
-	binary_view(const std::byte* src, const size_t start = 0)
+	binary_view(const std::byte* src, const std::streampos start = 0)
 	{
 		load(src, start);
 	}
 
-	binary_view(const binary& binary, const size_t start = 0)
+	binary_view(const binary& binary, const std::streampos start = 0)
 	{
 		load(binary, start);
 	}
@@ -361,97 +359,103 @@ public:
 
 /*~ Loading */
 
-	void load(const std::byte* src, const size_t start = 0)
+	void load(const std::byte* src, const std::streampos start = 0, const std::streamsize size = no_limit)
 	{
-		address = &src[start];
+		m_address = &src[start];
+		if (size != no_limit) {
+			m_end = m_address + size;
+		}
 		m_pos = 0;
 	}
-	void load(const binary& binary, const size_t start = 0)
+	void load(const binary& binary, const std::streampos start = 0, const std::streamsize size = no_limit)
 	{
-		address = &binary.data()[start];
+		m_address = &binary.data()[start];
+		if (size == no_limit) {
+			m_end = m_address + binary.size();
+		}
 		m_pos = 0;
 	}
 
 /*~ Reading */
 
 	template<std::integral T>
-	auto peek(std::endian endianness, size_t offset = 0)
+	[[nodiscard]] auto peek(std::endian endianness, std::streamoff offset = 0) const
 	-> std::expected<T, error>
 	{
-		const size_t target_pos = m_pos + offset;
+		const std::streampos target_pos = m_pos + offset;
 
 		if (out_of_bounds(target_pos)) {
 			return std::unexpected{error::null_memory};
 		}
 
 		T result;
-		std::memcpy(&result, &address[target_pos], sizeof(T));
+		std::memcpy(&result, &m_address[target_pos], sizeof(T));
 		result = binary::set_endian(result, endianness);
 		return result;
 	}
 
 	template<std::same_as<std::byte> T>
-	auto peek(size_t offset = 0)
+	[[nodiscard]] auto peek(std::streamoff offset = 0) const
 	-> std::expected<T, error>
 	{
-		const size_t target_pos = m_pos + offset;
+		const std::streampos target_pos = m_pos + offset;
 
 		if (out_of_bounds(target_pos)) {
 			return std::unexpected{error::null_memory};
 		}
 
-		std::byte result = address[target_pos];
+		std::byte result = m_address[target_pos];
 		return result;
 	}
 
 	// Strings of explicit length (copy).
 	template<std::same_as<std::string> T>
-	auto peek(size_t size, size_t offset = 0)
+	[[nodiscard]] auto peek(std::streamsize size, std::streamoff offset = 0)
 	-> std::expected<T, error>
 	{
-		const size_t target_pos = m_pos + offset;
+		const std::streampos target_pos = m_pos + offset;
 
 		if (out_of_bounds(target_pos)) {
 			return std::unexpected{error::null_memory};
 		}
 
-		std::string result = reinterpret_cast<const char*>(&address[target_pos]);
+		std::string result = reinterpret_cast<const char*>(&m_address[target_pos]);
 		result = result.substr(0, size);
 		return result;
 	}
 
 	// Null-terminated strings (reference).
 	template<std::same_as<std::string_view> T>
-	auto peek(size_t offset = 0)
+	[[nodiscard]] auto peek(std::streamoff offset = 0)
 	-> std::expected<T, error>
 	{
-		const size_t target_pos = m_pos + offset;
+		const std::streampos target_pos = m_pos + offset;
 
 		if (out_of_bounds(target_pos)) {
 			return std::unexpected{error::null_memory};
 		}
 
-		std::string_view result = reinterpret_cast<const char*>(&address[target_pos]);
+		std::string_view result = reinterpret_cast<const char*>(&m_address[target_pos]);
 		return result;
 	}
 
 	template<typename T>
-	auto peek_struct(size_t offset = 0)
+	[[nodiscard]] auto peek_struct(std::streamoff offset = 0)
 	-> std::expected<T, error>
 	{
-		const size_t target_pos = m_pos + offset;
+		const std::streampos target_pos = m_pos + offset;
 
 		if (out_of_bounds(target_pos)) {
 			return std::unexpected{error::null_memory};
 		}
 
 		T result;
-		std::memcpy(&result, &address[target_pos], sizeof(T));
+		std::memcpy(&result, &m_address[target_pos], sizeof(T));
 		return result;
 	}
 
 	template<std::integral T>
-	auto read(std::endian endianness)
+	[[nodiscard]] auto read(std::endian endianness)
 	-> std::expected<T, error>
 	{
 		auto result = peek<T>(endianness);
@@ -465,7 +469,7 @@ public:
 	}
 
 	template<std::same_as<std::byte> T>
-	auto read(size_t offset = 0)
+	[[nodiscard]] auto read(std::streamoff offset = 0)
 	-> std::expected<T, error>
 	{
 		auto result = peek<T>();
@@ -474,13 +478,13 @@ public:
 			return std::unexpected{result.error()};
 		}
 
-		m_pos++;
+		m_pos += sizeof(T);
 		return *result;
 	}
 
 	// Strings of explicit length (copy).
 	template<std::same_as<std::string> T>
-	auto read(size_t size)
+	[[nodiscard]] auto read(std::streamsize size)
 	-> std::expected<T, error>
 	{
 		auto result = peek<std::string>(size);
@@ -495,7 +499,7 @@ public:
 
 	// Null-terminated strings (reference).
 	template<std::same_as<std::string_view> T>
-	auto read()
+	[[nodiscard]] auto read()
 	-> std::expected<T, error>
 	{
 		auto result = peek<std::string_view>();
@@ -509,7 +513,7 @@ public:
 	}
 
 	template<typename T>
-	auto read_struct()
+	[[nodiscard]] auto read_struct()
 	-> std::expected<T, error>
 	{
 		auto result = peek<T>();
@@ -526,44 +530,47 @@ public:
 
 	[[nodiscard]] const std::byte* data() const
 	{
-		return address;
+		return m_address;
 	}
 
 	[[nodiscard]] bool is_empty() const
 	{
-		return address == nullptr;
+		return m_address == nullptr;
 	}
 
 /*~ Positioning*/
 
-	[[nodiscard]] size_t get_pos() const
+	[[nodiscard]] std::streampos get_pos() const
 	{
 		return m_pos;
 	}
 
-	void set_pos(size_t _pos)
+	void set_pos(std::streampos _pos)
 	{
 		m_pos = _pos;
 	}
 
-	void change_pos(size_t offset)
+	void change_pos(std::streamoff offset)
 	{
 		m_pos += offset;
 	}
 
-	void align_by(size_t bytes)
+	void align_by(std::streamoff bytes)
 	{
-		m_pos += bytes - ( (m_pos - 1) % bytes ) - 1;
+		m_pos += bytes - m_pos % bytes;
 	}
 
 private:
-	bool out_of_bounds(std::streampos target_pos)
+	bool out_of_bounds(std::streampos target_pos) const
 	{
-		return &address[target_pos] == nullptr;
+		return &m_address[target_pos] == nullptr;
 	}
 
-	const std::byte* address{nullptr};
-	size_t m_pos{0};
+	static constexpr std::streamsize no_limit = std::numeric_limits<std::streamsize>::max();
+
+	const std::byte* m_address{nullptr};
+	const std::byte* m_end{nullptr};
+	std::streampos m_pos{0};
 };
 
 }
