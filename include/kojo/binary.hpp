@@ -388,7 +388,7 @@ public:
 		if (exceeded_size(target_pos)) {
 			return std::unexpected{error::out_of_bounds};
 		}
-		if (reached_null_memory(target_pos)) {
+		if (has_null_memory(target_pos)) {
 			return std::unexpected{error::null_memory};
 		}
 
@@ -407,7 +407,7 @@ public:
 		if (exceeded_size(target_pos)) {
 			return std::unexpected{error::out_of_bounds};
 		}
-		if (reached_null_memory(target_pos)) {
+		if (has_null_memory(target_pos)) {
 			return std::unexpected{error::null_memory};
 		}
 
@@ -425,7 +425,7 @@ public:
 		if (exceeded_size(target_pos)) {
 			return std::unexpected{error::out_of_bounds};
 		}
-		if (reached_null_memory(target_pos)) {
+		if (has_null_memory(target_pos)) {
 			return std::unexpected{error::null_memory};
 		}
 
@@ -444,7 +444,7 @@ public:
 		if (exceeded_size(target_pos)) {
 			return std::unexpected{error::out_of_bounds};
 		}
-		if (reached_null_memory(target_pos)) {
+		if (has_null_memory(target_pos)) {
 			return std::unexpected{error::null_memory};
 		}
 
@@ -461,7 +461,7 @@ public:
 		if (exceeded_size(target_pos)) {
 			return std::unexpected{error::out_of_bounds};
 		}
-		if (reached_null_memory(target_pos)) {
+		if (has_null_memory(target_pos)) {
 			return std::unexpected{error::null_memory};
 		}
 
@@ -585,7 +585,7 @@ private:
 		return m_address + target_pos > m_end;
 	}
 
-	bool reached_null_memory(const std::streampos target_pos) const
+	bool has_null_memory(const std::streampos target_pos) const
 	{
 		return m_address + target_pos == nullptr;
 	}
