@@ -139,24 +139,21 @@ public:
 		m_pos += value_size;
 	}
 
-	void write(std::string_view value, std::streamsize length = 0)
+	void write(std::string_view value, const std::streamsize length = 0)
 	{
-		// Determine length and padding.
-		if (value.size() == 0) return;
-		std::streamsize padding{1};
-		if (length == 0) {
-			length = value.size();
-		} else {
-			padding = length - value.size();
+		if (value.size() == 0) {
+			return;
 		}
+		
+		std::streamsize actual_length = std::min<std::streamsize>(length, value.size());
+		std::streamsize padding = std::max<std::streamsize>(0, length - actual_length);
 
-		// Write string to memory.
-		if (m_pos + length + padding > m_storage->size()) {
-			m_storage->resize(m_pos + length + padding);
+		if (m_pos + actual_length + padding > m_storage->size()) {
+			m_storage->resize(m_pos + actual_length + padding);
 		}
-		std::memcpy(m_storage->data() + m_pos, value.data(), length);
-		std::memset(m_storage->data() + m_pos + length, '\0', padding);
-		m_pos += length + padding;
+		std::memcpy(m_storage->data() + m_pos, value.data(), actual_length);
+		std::memset(m_storage->data() + m_pos + actual_length, '\0', padding);
+		m_pos += actual_length + padding;
 	}
 
 	template<std::integral T>
