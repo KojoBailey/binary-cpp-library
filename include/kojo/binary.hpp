@@ -129,16 +129,7 @@ public:
 
 /*~ Writing */
 
-	void write(const std::byte value)
-	{
-		constexpr std::streamoff value_size = sizeof(std::byte);
-		if (m_pos + value_size > m_storage->size()) {
-			m_storage->resize(m_pos + value_size);
-		}
-		std::memcpy(m_storage->data() + m_pos, &value, value_size);
-		m_pos += value_size;
-	}
-
+	
 	void write(std::string_view value, const std::streamsize length = 0)
 	{
 		if (value.size() == 0) {
@@ -154,6 +145,16 @@ public:
 		std::memcpy(m_storage->data() + m_pos, value.data(), actual_length);
 		std::memset(m_storage->data() + m_pos + actual_length, '\0', padding);
 		m_pos += actual_length + padding;
+	}
+
+	void write(const std::byte value)
+	{
+		constexpr std::streamoff value_size = sizeof(std::byte);
+		if (m_pos + value_size > m_storage->size()) {
+			m_storage->resize(m_pos + value_size);
+		}
+		std::memcpy(m_storage->data() + m_pos, &value, value_size);
+		m_pos += value_size;
 	}
 
 	template<std::integral T>
@@ -172,9 +173,7 @@ public:
 	void dump_file(const std::filesystem::path& output_path) const
 	{
 		std::ofstream file_output{output_path, std::ios::binary};
-		for (std::byte byte : *m_storage) {
-			file_output << static_cast<char>(byte);
-		}
+		file_output.write(reinterpret_cast<const char*>(m_storage->data()), m_storage->size());
 	}
 
 	template <typename T> static T set_endian(const T value, const std::endian endianness)
