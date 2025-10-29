@@ -239,6 +239,11 @@ public:
 		}
 	}
 
+	void reserve(std::size_t size)
+	{
+		m_storage->reserve(size);
+	}
+
 private:
 	auto load_file_path(
 		const std::filesystem::path& file_path,
