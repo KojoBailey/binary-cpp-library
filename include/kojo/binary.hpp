@@ -354,7 +354,8 @@ public:
 
 	enum error {
 		ok = 0,
-		null_memory,         // Attempted to read from null/out-of-bounds memory.
+		null_memory,         	// Attempted to read from null memory.
+		out_of_bounds,		// Attempted to read beyond defined size.
 	};
 
 /*~ Loading */
@@ -384,7 +385,10 @@ public:
 	{
 		const std::streampos target_pos = m_pos + offset;
 
-		if (out_of_bounds(target_pos)) {
+		if (exceeded_size(target_pos)) {
+			return std::unexpected{error::out_of_bounds};
+		}
+		if (reached_null_memory(target_pos)) {
 			return std::unexpected{error::null_memory};
 		}
 
@@ -400,7 +404,10 @@ public:
 	{
 		const std::streampos target_pos = m_pos + offset;
 
-		if (out_of_bounds(target_pos)) {
+		if (exceeded_size(target_pos)) {
+			return std::unexpected{error::out_of_bounds};
+		}
+		if (reached_null_memory(target_pos)) {
 			return std::unexpected{error::null_memory};
 		}
 
@@ -415,7 +422,10 @@ public:
 	{
 		const std::streampos target_pos = m_pos + offset;
 
-		if (out_of_bounds(target_pos)) {
+		if (exceeded_size(target_pos)) {
+			return std::unexpected{error::out_of_bounds};
+		}
+		if (reached_null_memory(target_pos)) {
 			return std::unexpected{error::null_memory};
 		}
 
@@ -431,7 +441,10 @@ public:
 	{
 		const std::streampos target_pos = m_pos + offset;
 
-		if (out_of_bounds(target_pos)) {
+		if (exceeded_size(target_pos)) {
+			return std::unexpected{error::out_of_bounds};
+		}
+		if (reached_null_memory(target_pos)) {
 			return std::unexpected{error::null_memory};
 		}
 
@@ -445,7 +458,10 @@ public:
 	{
 		const std::streampos target_pos = m_pos + offset;
 
-		if (out_of_bounds(target_pos)) {
+		if (exceeded_size(target_pos)) {
+			return std::unexpected{error::out_of_bounds};
+		}
+		if (reached_null_memory(target_pos)) {
 			return std::unexpected{error::null_memory};
 		}
 
@@ -561,9 +577,15 @@ public:
 	}
 
 private:
-	bool out_of_bounds(std::streampos target_pos) const
+	bool exceeded_size(std::streampos target_pos) const
 	{
-		return &m_address[target_pos] == nullptr;
+		if (!m_end) return true;
+		return m_address + target_pos > m_end;
+	}
+
+	bool reached_null_memory(std::streampos target_pos) const
+	{
+		return m_address + target_pos == nullptr;
 	}
 
 	static constexpr std::streamsize no_limit = std::numeric_limits<std::streamsize>::max();
