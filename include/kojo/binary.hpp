@@ -231,7 +231,10 @@ public:
 
 	void align_by(std::streamoff bytes)
 	{
-		m_pos += bytes - m_pos % bytes;
+		const std::streamsize remainder = m_pos % bytes;
+		if (remainder != 0) {
+			m_pos += bytes - remainder;
+		}
 	}
 
 private:
@@ -570,7 +573,10 @@ public:
 
 	void align_by(std::streamoff bytes)
 	{
-		m_pos += bytes - m_pos % bytes;
+		const std::streamsize remainder = m_pos % bytes;
+		if (remainder != 0) {
+			m_pos += bytes - remainder;
+		}
 	}
 
 private:
