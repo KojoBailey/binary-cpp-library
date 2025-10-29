@@ -129,8 +129,8 @@ public:
 
 /*~ Writing */
 
-	
-	void write(std::string_view value, const std::streamsize length = 0)
+	template <std::same_as<std::string_view> T>
+	void write(T value, const std::streamsize length = 0)
 	{
 		if (value.size() == 0) {
 			return;
@@ -147,7 +147,8 @@ public:
 		m_pos += actual_length + padding;
 	}
 
-	void write(const std::byte value)
+	template <std::same_as<std::byte> T>
+	void write(const T value)
 	{
 		constexpr std::streamoff value_size = sizeof(std::byte);
 		if (m_pos + value_size > m_storage->size()) {
