@@ -89,7 +89,7 @@ public:
 	
 	[[nodiscard]] static auto load(
 		const std::filesystem::path& file_path,
-		std::streamsize size = SIZE_MAX,
+		std::size_t size = no_limit,
 		const std::streamoff start_pos = 0
 	) -> std::expected<binary, error>
 	{
@@ -102,7 +102,7 @@ public:
 
 	[[nodiscard]] static auto load(
 		const std::byte* byte_stream,
-		const std::streamsize size,
+		const std::size_t size,
 		const std::streamoff start_pos = 0
 	) -> std::expected<binary, error>
 	{
@@ -115,12 +115,12 @@ public:
 
 	[[nodiscard]] static auto load(
 		const std::vector<std::byte>& vec,
-		const std::streamsize size = SIZE_MAX,
+		const std::size_t size = no_limit,
 		const std::streamoff start_pos = 0
 	) -> std::expected<binary, error>
 	{
 		binary result;
-		std::streamsize true_size = (size == SIZE_MAX) ? vec.size() : size;
+		std::size_t true_size = (size == no_limit) ? vec.size() : size;
 		if (auto check = result.load_byte_stream(vec.data(), true_size, start_pos); !check) {
 			return std::unexpected{check.error()};
 		}
@@ -130,7 +130,7 @@ public:
 /*~ Writing */
 
 	template <std::same_as<std::string_view> T>
-	void write(T value, const std::streamsize length = 0)
+	void write(T value, const std::size_t length = 0)
 	{
 		const size_t calculated_length = value.size();
 
@@ -138,9 +138,9 @@ public:
 			return;
 		}
 		
-		std::streamsize actual_length = (length == 0) ? calculated_length
-			: std::min<std::streamsize>(length, calculated_length);
-		std::streamsize padding = std::max<std::streamsize>(0, length - actual_length);
+		std::size_t actual_length = (length == 0) ? calculated_length
+			: std::min<std::size_t>(length, calculated_length);
+		std::size_t padding = std::max<std::size_t>(0, length - actual_length);
 
 		if (m_pos + actual_length + padding > m_storage->size()) {
 			m_storage->resize(m_pos + actual_length + padding);
@@ -190,7 +190,7 @@ public:
 
 /*~ Storage */
 
-	[[nodiscard]] std::streamsize size() const
+	[[nodiscard]] std::size_t size() const
 	{
 		return m_storage->size();
 	}
@@ -234,7 +234,7 @@ public:
 
 	void align_by(std::streamoff bytes)
 	{
-		const std::streamsize remainder = m_pos % bytes;
+		const std::size_t remainder = m_pos % bytes;
 		if (remainder != 0) {
 			m_pos += bytes - remainder;
 		}
@@ -243,7 +243,7 @@ public:
 private:
 	auto load_file_path(
 		const std::filesystem::path& file_path,
-		std::streamsize size = SIZE_MAX,
+		std::size_t size = no_limit,
 		const std::streamoff start_pos = 0
 	) -> std::expected<binary, error>
 	{
@@ -267,7 +267,7 @@ private:
 			return {};
 		}
 
-		if (size == SIZE_MAX) {
+		if (size == no_limit) {
 			file.seekg(0, std::ios::end);
 			size = file.tellg() - start_pos;
 		}
@@ -290,7 +290,7 @@ private:
 
 	auto load_byte_stream(	
 		const std::byte* byte_stream,
-		const std::streamsize size,
+		const std::size_t size,
 		const std::streamoff start_pos = 0
 	) -> std::expected<binary, error>
 	{
@@ -315,7 +315,7 @@ private:
 		return {};
 	}
 
-	static constexpr std::streamsize no_limit = std::numeric_limits<std::streamsize>::max();
+	static constexpr std::size_t no_limit = std::numeric_limits<std::size_t>::max();
 
 	std::shared_ptr<std::vector<std::byte>> m_storage{std::make_shared<std::vector<std::byte>>()};
 	std::streampos m_pos{0};
@@ -365,7 +365,7 @@ public:
 
 /*~ Loading */
 
-	void load(const std::byte* src, const std::streampos start = 0, const std::streamsize size = no_limit)
+	void load(const std::byte* src, const std::streampos start = 0, const std::size_t size = no_limit)
 	{
 		m_address = &src[start];
 		if (size != no_limit) {
@@ -373,7 +373,7 @@ public:
 		}
 		m_pos = 0;
 	}
-	void load(const binary& binary, const std::streampos start = 0, const std::streamsize size = no_limit)
+	void load(const binary& binary, const std::streampos start = 0, const std::size_t size = no_limit)
 	{
 		m_address = &binary.data()[start];
 		if (size == no_limit) {
@@ -416,7 +416,7 @@ public:
 
 	// Strings of explicit length (copy).
 	template<std::same_as<std::string> T>
-	[[nodiscard]] auto peek(const std::streamsize size, const std::streamoff offset = 0) const
+	[[nodiscard]] auto peek(const std::size_t size, const std::streamoff offset = 0) const
 	-> std::expected<T, error>
 	{
 		const std::streampos target_pos = m_pos + offset;
@@ -490,7 +490,7 @@ public:
 
 	// Strings of explicit length (copy).
 	template<std::same_as<std::string> T>
-	[[nodiscard]] auto read(const std::streamsize size)
+	[[nodiscard]] auto read(const std::size_t size)
 	-> std::expected<T, error>
 	{
 		const auto result = peek<std::string>(size);
@@ -563,7 +563,7 @@ public:
 
 	void align_by(std::streamoff bytes)
 	{
-		const std::streamsize remainder = m_pos % bytes;
+		const std::size_t remainder = m_pos % bytes;
 		if (remainder != 0) {
 			m_pos += bytes - remainder;
 		}
@@ -578,7 +578,7 @@ private:
 		return m_address + target_pos > m_end;
 	}
 
-	static constexpr std::streamsize no_limit = std::numeric_limits<std::streamsize>::max();
+	static constexpr std::size_t no_limit = std::numeric_limits<std::size_t>::max();
 
 	const std::byte* m_address{nullptr};
 	const std::byte* m_end{nullptr};
