@@ -132,11 +132,14 @@ public:
 	template <std::same_as<std::string_view> T>
 	void write(T value, const std::streamsize length = 0)
 	{
-		if (value.size() == 0) {
+		const size_t calculated_length = value.size();
+
+		if (calculated_length == 0) {
 			return;
 		}
 		
-		std::streamsize actual_length = std::min<std::streamsize>(length, value.size());
+		std::streamsize actual_length = (length == 0) ? calculated_length
+			: std::min<std::streamsize>(length, calculated_length);
 		std::streamsize padding = std::max<std::streamsize>(0, length - actual_length);
 
 		if (m_pos + actual_length + padding > m_storage->size()) {
@@ -311,6 +314,8 @@ private:
 
 		return {};
 	}
+
+	static constexpr std::streamsize no_limit = std::numeric_limits<std::streamsize>::max();
 
 	std::shared_ptr<std::vector<std::byte>> m_storage{std::make_shared<std::vector<std::byte>>()};
 	std::streampos m_pos{0};
