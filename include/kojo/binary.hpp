@@ -138,9 +138,8 @@ public:
 			return;
 		}
 		
-		std::size_t actual_length = (length == 0) ? calculated_length
-			: std::min<std::size_t>(length, calculated_length);
-		std::size_t padding = std::max<std::size_t>(0, length - actual_length);
+		std::size_t actual_length = (length == 0) ? calculated_length : std::min(length, calculated_length);
+		std::size_t padding = (length > actual_length) ? length - actual_length : 0;
 
 		if (m_pos + actual_length + padding > m_storage->size()) {
 			m_storage->resize(m_pos + actual_length + padding);
