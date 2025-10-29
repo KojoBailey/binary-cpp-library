@@ -180,7 +180,7 @@ public:
 		}
 	}
 
-	template <typename T> static T set_endian(T value, std::endian endianness)
+	template <typename T> static T set_endian(const T value, const std::endian endianness)
 	{
 		static_assert(std::is_integral_v<T>, "T must be an integral type.");
 		return (std::endian::native != endianness)
@@ -380,7 +380,7 @@ public:
 /*~ Reading */
 
 	template<std::integral T>
-	[[nodiscard]] auto peek(std::endian endianness, std::streamoff offset = 0) const
+	[[nodiscard]] auto peek(const std::endian endianness, const std::streamoff offset = 0) const
 	-> std::expected<T, error>
 	{
 		const std::streampos target_pos = m_pos + offset;
@@ -399,7 +399,7 @@ public:
 	}
 
 	template<std::same_as<std::byte> T>
-	[[nodiscard]] auto peek(std::streamoff offset = 0) const
+	[[nodiscard]] auto peek(const std::streamoff offset = 0) const
 	-> std::expected<T, error>
 	{
 		const std::streampos target_pos = m_pos + offset;
@@ -417,7 +417,7 @@ public:
 
 	// Strings of explicit length (copy).
 	template<std::same_as<std::string> T>
-	[[nodiscard]] auto peek(std::streamsize size, std::streamoff offset = 0)
+	[[nodiscard]] auto peek(const std::streamsize size, const std::streamoff offset = 0) const
 	-> std::expected<T, error>
 	{
 		const std::streampos target_pos = m_pos + offset;
@@ -436,7 +436,7 @@ public:
 
 	// Null-terminated strings (reference).
 	template<std::same_as<std::string_view> T>
-	[[nodiscard]] auto peek(std::streamoff offset = 0)
+	[[nodiscard]] auto peek(const std::streamoff offset = 0) const
 	-> std::expected<T, error>
 	{
 		const std::streampos target_pos = m_pos + offset;
@@ -453,7 +453,7 @@ public:
 	}
 
 	template<typename T>
-	[[nodiscard]] auto peek_struct(std::streamoff offset = 0)
+	[[nodiscard]] auto peek_struct(const std::streamoff offset = 0) const
 	-> std::expected<T, error>
 	{
 		const std::streampos target_pos = m_pos + offset;
@@ -471,10 +471,10 @@ public:
 	}
 
 	template<std::integral T>
-	[[nodiscard]] auto read(std::endian endianness)
+	[[nodiscard]] auto read(const std::endian endianness)
 	-> std::expected<T, error>
 	{
-		auto result = peek<T>(endianness);
+		const auto result = peek<T>(endianness);
 
 		if (!result) {
 			return std::unexpected{result.error()};
@@ -485,10 +485,10 @@ public:
 	}
 
 	template<std::same_as<std::byte> T>
-	[[nodiscard]] auto read(std::streamoff offset = 0)
+	[[nodiscard]] auto read(const std::streamoff offset = 0)
 	-> std::expected<T, error>
 	{
-		auto result = peek<T>();
+		const auto result = peek<T>();
 
 		if (!result) {
 			return std::unexpected{result.error()};
@@ -500,10 +500,10 @@ public:
 
 	// Strings of explicit length (copy).
 	template<std::same_as<std::string> T>
-	[[nodiscard]] auto read(std::streamsize size)
+	[[nodiscard]] auto read(const std::streamsize size)
 	-> std::expected<T, error>
 	{
-		auto result = peek<std::string>(size);
+		const auto result = peek<std::string>(size);
 
 		if (!result) {
 			return std::unexpected{result.error()};
@@ -518,7 +518,7 @@ public:
 	[[nodiscard]] auto read()
 	-> std::expected<T, error>
 	{
-		auto result = peek<std::string_view>();
+		const auto result = peek<std::string_view>();
 
 		if (!result) {
 			return std::unexpected{result.error()};
@@ -532,7 +532,7 @@ public:
 	[[nodiscard]] auto read_struct()
 	-> std::expected<T, error>
 	{
-		auto result = peek<T>();
+		const auto result = peek<T>();
 
 		if (!result) {
 			return std::unexpected{result.error()};
@@ -577,13 +577,15 @@ public:
 	}
 
 private:
-	bool exceeded_size(std::streampos target_pos) const
+	bool exceeded_size(const std::streampos target_pos) const
 	{
-		if (!m_end) return true;
+		if (!m_end) {
+			return true;
+		}
 		return m_address + target_pos > m_end;
 	}
 
-	bool reached_null_memory(std::streampos target_pos) const
+	bool reached_null_memory(const std::streampos target_pos) const
 	{
 		return m_address + target_pos == nullptr;
 	}
