@@ -393,9 +393,6 @@ public:
 		if (exceeded_size(target_pos)) {
 			return std::unexpected{error::out_of_bounds};
 		}
-		if (has_null_memory(target_pos)) {
-			return std::unexpected{error::null_memory};
-		}
 
 		T result;
 		std::memcpy(&result, &m_address[target_pos], sizeof(T));
@@ -412,9 +409,6 @@ public:
 		if (exceeded_size(target_pos)) {
 			return std::unexpected{error::out_of_bounds};
 		}
-		if (has_null_memory(target_pos)) {
-			return std::unexpected{error::null_memory};
-		}
 
 		std::byte result = m_address[target_pos];
 		return result;
@@ -429,9 +423,6 @@ public:
 
 		if (exceeded_size(target_pos)) {
 			return std::unexpected{error::out_of_bounds};
-		}
-		if (has_null_memory(target_pos)) {
-			return std::unexpected{error::null_memory};
 		}
 
 		std::string result = reinterpret_cast<const char*>(&m_address[target_pos]);
@@ -449,9 +440,6 @@ public:
 		if (exceeded_size(target_pos)) {
 			return std::unexpected{error::out_of_bounds};
 		}
-		if (has_null_memory(target_pos)) {
-			return std::unexpected{error::null_memory};
-		}
 
 		std::string_view result = reinterpret_cast<const char*>(&m_address[target_pos]);
 		return result;
@@ -465,9 +453,6 @@ public:
 
 		if (exceeded_size(target_pos)) {
 			return std::unexpected{error::out_of_bounds};
-		}
-		if (has_null_memory(target_pos)) {
-			return std::unexpected{error::null_memory};
 		}
 
 		T result;
@@ -591,11 +576,6 @@ private:
 			return false;
 		}
 		return m_address + target_pos > m_end;
-	}
-
-	bool has_null_memory(const std::streampos target_pos) const
-	{
-		return m_address + target_pos == nullptr;
 	}
 
 	static constexpr std::streamsize no_limit = std::numeric_limits<std::streamsize>::max();
