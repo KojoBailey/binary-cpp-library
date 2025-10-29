@@ -2,9 +2,9 @@
 This library for **C++23 and newer** assists reading from and writing to **binary data**, making use of my own experience as a reverse engineer.
 
 It aims to:
-- Make use of modern C++ features where **useful** (e.g. `std::endian` and `std::byteswap`).
+- Make use of modern C++ features where **useful** (e.g. `std::endian` and `std::expected`).
 - Be as **open-purposed** as possible for a wide range of use cases.
-- Mirror the **standard library's style** for interface.
+- Mirror the **standard library's style** for interface, although with **[result types](https://en.wikipedia.org/wiki/Result_type)**.
 - Receive updates as necessary.
 
 **WARNING:** The documentation is currently a bit outdated. Will update soon!
