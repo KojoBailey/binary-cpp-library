@@ -87,7 +87,7 @@ public:
 
 /*~ Loading */
 	
-	static auto load(
+	[[nodiscard]] static auto load(
 		const std::filesystem::path& file_path,
 		std::streamsize size = SIZE_MAX,
 		const std::streamoff start_pos = 0
@@ -100,7 +100,7 @@ public:
 		return result;
 	}
 
-	static auto load(
+	[[nodiscard]] static auto load(
 		const std::byte* byte_stream,
 		const std::streamsize size,
 		const std::streamoff start_pos = 0
@@ -113,7 +113,7 @@ public:
 		return result;
 	}
 
-	static auto load(
+	[[nodiscard]] static auto load(
 		const std::vector<std::byte>& vec,
 		const std::streamsize size = SIZE_MAX,
 		const std::streamoff start_pos = 0
