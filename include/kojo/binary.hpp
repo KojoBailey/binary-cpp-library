@@ -160,7 +160,7 @@ public:
 	}
 
 	template<std::integral T>
-	void write(T value, std::endian endianness)
+	void write(T value, const std::endian endianness)
 	{
 		constexpr std::streamoff value_size = sizeof(T);
 		if (m_pos + value_size > m_storage->size()) {
