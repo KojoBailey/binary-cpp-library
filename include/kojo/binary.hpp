@@ -242,7 +242,7 @@ private:
 		const std::filesystem::path& file_path,
 		std::streamsize size = SIZE_MAX,
 		const std::streamoff start_pos = 0
-	) -> std::expected<void, error>
+	) -> std::expected<binary, error>
 	{
 		if (!std::filesystem::exists(file_path)) {
 			return std::unexpected{error::file_not_exist};
