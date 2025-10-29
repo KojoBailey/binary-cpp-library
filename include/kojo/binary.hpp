@@ -75,7 +75,7 @@ public:
 
 /*~ Error-Handling */
 
-	enum error {
+	enum class error {
 		ok = 0,
 		file_not_exist,         // File could not be found at specified path.
 		invalid_file,           // Specified path does not lead to a regular file.
@@ -357,7 +357,7 @@ public:
 
 /*~ Error-Handling */
 
-	enum error {
+	enum class error {
 		ok = 0,
 		null_memory,         	// Attempted to read from null memory.
 		out_of_bounds,		// Attempted to read beyond defined size.
