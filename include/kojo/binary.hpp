@@ -74,14 +74,14 @@ public:
 
 /*~ Error-Handling */
 
-	enum error_status {
-		OK = 0,
-		FILE_NOT_EXIST,         // File could not be found at specified path.
-		INVALID_FILE,           // Specified path does not lead to a regular file.
-		FILE_NOT_OPEN,          // Attempting to open the specified file failed.
-		INVALID_FILE_SIZE,      // The specified size was invalid for whatever reason.
-		NULL_POINTER,           // Pointer argument is null and cannot be used.
-		INSUFFICIENT_MEMORY,    // Ran out of memory while trying to resize.
+	enum error {
+		ok = 0,
+		file_not_exist,         // File could not be found at specified path.
+		invalid_file,           // Specified path does not lead to a regular file.
+		file_not_open,          // Attempting to open the specified file failed.
+		invalid_file_size,      // The specified size was invalid for whatever reason.
+		null_pointer,           // Pointer argument is null and cannot be used.
+		insufficient_memory,    // Ran out of memory while trying to resize.
 	};
 
 /*~ Loading */
@@ -90,7 +90,7 @@ public:
 		const std::filesystem::path& file_path,
 		std::streamsize size = SIZE_MAX,
 		const std::streamoff start_pos = 0
-	) -> std::expected<binary, error_status>
+	) -> std::expected<binary, error>
 	{
 		binary result;
 		if (auto check = result.load_file_path(file_path, size, start_pos); !check) {
@@ -103,7 +103,7 @@ public:
 		const std::byte* byte_stream,
 		const std::streamsize size,
 		const std::streamoff start_pos = 0
-	) -> std::expected<binary, error_status>
+	) -> std::expected<binary, error>
 	{
 		binary result;
 		if (auto check = result.load_byte_stream(byte_stream, size, start_pos); !check) {
@@ -116,7 +116,7 @@ public:
 		const std::vector<std::byte>& vec,
 		const std::streamsize size = SIZE_MAX,
 		const std::streamoff start_pos = 0
-	) -> std::expected<binary, error_status>
+	) -> std::expected<binary, error>
 	{
 		binary result;
 		std::streamsize true_size = (size == SIZE_MAX) ? vec.size() : size;
@@ -244,19 +244,19 @@ private:
 		const std::filesystem::path& file_path,
 		std::streamsize size = SIZE_MAX,
 		const std::streamoff start_pos = 0
-	) -> std::expected<void, error_status>
+	) -> std::expected<void, error>
 	{
 		if (!std::filesystem::exists(file_path)) {
-			return std::unexpected{error_status::FILE_NOT_EXIST};
+			return std::unexpected{error::file_not_exist};
 		}
 
 		if (!std::filesystem::is_regular_file(file_path)) {
-			return std::unexpected{error_status::INVALID_FILE};
+			return std::unexpected{error::invalid_file};
 		}
 		
 		std::ifstream file{file_path, std::ios::binary};
 		if (!file.is_open()) {
-			return std::unexpected{error_status::FILE_NOT_OPEN};
+			return std::unexpected{error::file_not_open};
 		}
 
 		m_storage->clear();
@@ -275,7 +275,7 @@ private:
 		try {
 			m_storage->resize(size);
 		} catch (const std::bad_alloc&) {
-			return std::unexpected{error_status::INSUFFICIENT_MEMORY};
+			return std::unexpected{error::insufficient_memory};
 		}
 		file.read(reinterpret_cast<char*>(m_storage->data()), size);
 
@@ -291,10 +291,10 @@ private:
 		const std::byte* byte_stream,
 		const std::streamsize size,
 		const std::streamoff start_pos = 0
-	) -> std::expected<binary, error_status>
+	) -> std::expected<binary, error>
 	{
 		if (!byte_stream) {
-			return std::unexpected{error_status::NULL_POINTER};
+			return std::unexpected{error::null_pointer};
 		}
 
 		m_storage->clear();
@@ -307,7 +307,7 @@ private:
 		try {
 			m_storage->resize(size);
 		} catch (const std::bad_alloc&) {
-			return std::unexpected{error_status::INSUFFICIENT_MEMORY};
+			return std::unexpected{error::insufficient_memory};
 		}
 		std::memcpy(m_storage->data(), byte_stream + start_pos, size);
 
@@ -354,9 +354,9 @@ public:
 
 /*~ Error-Handling */
 
-	enum error_status {
-		OK = 0,
-		NULL_MEMORY,         // Attempted to read from null/out-of-bounds memory.
+	enum error {
+		ok = 0,
+		null_memory,         // Attempted to read from null/out-of-bounds memory.
 	};
 
 /*~ Loading */
@@ -376,12 +376,12 @@ public:
 
 	template<std::integral T>
 	auto peek(std::endian endianness, size_t offset = 0)
-	-> std::expected<T, error_status>
+	-> std::expected<T, error>
 	{
 		const size_t target_pos = m_pos + offset;
 
 		if (out_of_bounds(target_pos)) {
-			return std::unexpected{error_status::NULL_MEMORY};
+			return std::unexpected{error::null_memory};
 		}
 
 		T result;
@@ -392,12 +392,12 @@ public:
 
 	template<std::same_as<std::byte> T>
 	auto peek(size_t offset = 0)
-	-> std::expected<T, error_status>
+	-> std::expected<T, error>
 	{
 		const size_t target_pos = m_pos + offset;
 
 		if (out_of_bounds(target_pos)) {
-			return std::unexpected{error_status::NULL_MEMORY};
+			return std::unexpected{error::null_memory};
 		}
 
 		std::byte result = address[target_pos];
@@ -407,12 +407,12 @@ public:
 	// Strings of explicit length (copy).
 	template<std::same_as<std::string> T>
 	auto peek(size_t size, size_t offset = 0)
-	-> std::expected<T, error_status>
+	-> std::expected<T, error>
 	{
 		const size_t target_pos = m_pos + offset;
 
 		if (out_of_bounds(target_pos)) {
-			return std::unexpected{error_status::NULL_MEMORY};
+			return std::unexpected{error::null_memory};
 		}
 
 		std::string result = reinterpret_cast<const char*>(&address[target_pos]);
@@ -423,12 +423,12 @@ public:
 	// Null-terminated strings (reference).
 	template<std::same_as<std::string_view> T>
 	auto peek(size_t offset = 0)
-	-> std::expected<T, error_status>
+	-> std::expected<T, error>
 	{
 		const size_t target_pos = m_pos + offset;
 
 		if (out_of_bounds(target_pos)) {
-			return std::unexpected{error_status::NULL_MEMORY};
+			return std::unexpected{error::null_memory};
 		}
 
 		std::string_view result = reinterpret_cast<const char*>(&address[target_pos]);
@@ -437,12 +437,12 @@ public:
 
 	template<typename T>
 	auto peek_struct(size_t offset = 0)
-	-> std::expected<T, error_status>
+	-> std::expected<T, error>
 	{
 		const size_t target_pos = m_pos + offset;
 
 		if (out_of_bounds(target_pos)) {
-			return std::unexpected{error_status::NULL_MEMORY};
+			return std::unexpected{error::null_memory};
 		}
 
 		T result;
@@ -452,7 +452,7 @@ public:
 
 	template<std::integral T>
 	auto read(std::endian endianness)
-	-> std::expected<T, error_status>
+	-> std::expected<T, error>
 	{
 		auto result = peek<T>(endianness);
 
@@ -466,7 +466,7 @@ public:
 
 	template<std::same_as<std::byte> T>
 	auto read(size_t offset = 0)
-	-> std::expected<T, error_status>
+	-> std::expected<T, error>
 	{
 		auto result = peek<T>();
 
@@ -481,7 +481,7 @@ public:
 	// Strings of explicit length (copy).
 	template<std::same_as<std::string> T>
 	auto read(size_t size)
-	-> std::expected<T, error_status>
+	-> std::expected<T, error>
 	{
 		auto result = peek<std::string>(size);
 
@@ -496,7 +496,7 @@ public:
 	// Null-terminated strings (reference).
 	template<std::same_as<std::string_view> T>
 	auto read()
-	-> std::expected<T, error_status>
+	-> std::expected<T, error>
 	{
 		auto result = peek<std::string_view>();
 
@@ -510,7 +510,7 @@ public:
 
 	template<typename T>
 	auto read_struct()
-	-> std::expected<T, error_status>
+	-> std::expected<T, error>
 	{
 		auto result = peek<T>();
 
