@@ -580,7 +580,7 @@ private:
 	bool exceeded_size(const std::streampos target_pos) const
 	{
 		if (!m_end) {
-			return true;
+			return false;
 		}
 		return m_address + target_pos > m_end;
 	}
