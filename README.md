@@ -1,4 +1,8 @@
 # [binary++](https://github.com/KojoBailey/binary-cpp-library)
+
+> [!WARNING]
+> This library is currently in development, and as such, features listed in the documentation may be incomplete or yet to be implemented. However, outdated documentation will be avoided \:)
+
 This library for **C++23** assists reading from and writing to **binary data**, making use of my own experience as a reverse engineer.
 
 It aims to:
@@ -63,4 +67,3 @@ namespace kojo::binary_types {
 Please note that the float types are temporarily using the GCC/Clang options, which I will replace with the floats from C++23's `<stdfloat>` header once I'm able to use it.
 
 ## Examples
-(TBD)
