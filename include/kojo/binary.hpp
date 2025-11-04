@@ -469,13 +469,8 @@ public:
 	-> std::expected<T, error>
 	{
 		const auto result = peek<T>(endianness);
-
-		if (!result) {
-			return std::unexpected{result.error()};
-		}
-
 		m_pos += sizeof(T);
-		return *result;
+		return result;
 	}
 
 	template<std::same_as<std::byte> T>
@@ -483,13 +478,8 @@ public:
 	-> std::expected<T, error>
 	{
 		const auto result = peek<T>();
-
-		if (!result) {
-			return std::unexpected{result.error()};
-		}
-
 		m_pos += sizeof(T);
-		return *result;
+		return result;
 	}
 
 	// Strings of explicit length (copy).
@@ -498,13 +488,8 @@ public:
 	-> std::expected<T, error>
 	{
 		const auto result = peek<std::string>(size);
-
-		if (!result) {
-			return std::unexpected{result.error()};
-		}
-
 		m_pos += size;
-		return *result;
+		return result;
 	}
 
 	// Null-terminated strings (reference).
@@ -514,12 +499,11 @@ public:
 	{
 		const auto result = peek<std::string_view>();
 
-		if (!result) {
-			return std::unexpected{result.error()};
+		if (result) {
+			m_pos += (*result).size() + 1;
 		}
 
-		m_pos += (*result).size() + 1;
-		return *result;
+		return result;
 	}
 
 	template<typename T>
@@ -527,13 +511,8 @@ public:
 	-> std::expected<T, error>
 	{
 		const auto result = peek<T>();
-
-		if (!result) {
-			return std::unexpected{result.error()};
-		}
-
 		m_pos += sizeof(T);
-		return *result;
+		return result;
 	}
 
 /*~ Data */
