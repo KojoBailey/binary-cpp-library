@@ -543,15 +543,15 @@ public:
 	void align_by(std::streamoff bytes)
 	{
 		const std::size_t remainder = m_pos % bytes;
-		if (remainder != 0) {
+		if (remainder) {
 			m_pos += bytes - remainder;
 		}
 	}
 
 private:
-	bool exceeded_size(const std::streampos target_pos) const
+	[[nodiscard]] bool exceeded_size(const std::streampos target_pos) const
 	{
-		if (!m_end) {
+		if (!m_end || !m_address) {
 			return false;
 		}
 		return m_address + target_pos > m_end;
