@@ -530,9 +530,9 @@ public:
 		return m_pos;
 	}
 
-	void set_pos(std::streampos _pos)
+	void set_pos(std::streampos new_pos)
 	{
-		m_pos = _pos;
+		m_pos = new_pos;
 	}
 
 	void change_pos(std::streamoff offset)
