@@ -468,18 +468,16 @@ public:
 	[[nodiscard]] auto read(const std::endian endianness)
 	-> std::expected<T, error>
 	{
-		const auto result = peek<T>(endianness);
 		m_pos += sizeof(T);
-		return result;
+		return peek<T>(endianness);
 	}
 
 	template<std::same_as<std::byte> T>
 	[[nodiscard]] auto read(const std::streamoff offset = 0)
 	-> std::expected<T, error>
 	{
-		const auto result = peek<T>();
 		m_pos += sizeof(T);
-		return result;
+		return peek<T>();
 	}
 
 	// Strings of explicit length (copy).
@@ -487,9 +485,8 @@ public:
 	[[nodiscard]] auto read(const std::size_t size)
 	-> std::expected<T, error>
 	{
-		const auto result = peek<std::string>(size);
 		m_pos += size;
-		return result;
+		return peek<std::string>(size);
 	}
 
 	// Null-terminated strings (reference).
@@ -510,9 +507,8 @@ public:
 	[[nodiscard]] auto read_struct()
 	-> std::expected<T, error>
 	{
-		const auto result = peek<T>();
 		m_pos += sizeof(T);
-		return result;
+		return peek<T>();
 	}
 
 /*~ Data */
