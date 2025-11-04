@@ -34,7 +34,7 @@ namespace binary_types {
 namespace util {
 
 template<std::integral T>
-constexpr T byteswap(T value) noexcept
+[[nodiscard]] constexpr T byteswap(const T value) noexcept
 {
 	static_assert(std::has_unique_object_representations_v<T>, "T may not have padding bits");
 	std::uint8_t buffer[sizeof(T)];
@@ -179,9 +179,9 @@ public:
 		file_output.write(reinterpret_cast<const char*>(m_storage->data()), m_storage->size());
 	}
 
-	template <typename T> static T set_endian(const T value, const std::endian endianness)
+	template <std::integral T>
+	[[nodiscard]] static constexpr T set_endian(const T value, const std::endian endianness) noexcept
 	{
-		static_assert(std::is_integral_v<T>, "T must be an integral type.");
 		return (std::endian::native != endianness)
 			? util::byteswap(value)
 			: value;
