@@ -525,7 +525,7 @@ public:
 
 /*~ Positioning*/
 
-	[[nodiscard]] std::streampos get_pos() const
+	[[nodiscard]] std::size_t get_pos() const
 	{
 		return m_pos;
 	}
