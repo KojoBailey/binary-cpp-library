@@ -6,26 +6,10 @@ It aims to:
 - Be as **open-purposed** as possible for a wide range of use cases.
 - Mirror the **standard library's style** for interface, although with **[result types](https://en.wikipedia.org/wiki/Result_type)**.
 
-**WARNING:** The documentation is currently a bit outdated. Will update soon!
-
 ## Table of Contents
 - [Dependencies](#dependencies)
 - [Usage](#usage)
 - [Examples](#examples)
-- [Documentation](#documentation)
-    - [`binary()`](#binary-1)
-    - [`load()`](#load)
-    - [`clear()`](#clear)
-    - [`data()`](#data)
-    - [`size()`](#size)
-    - [`set_endian()`](#set_endian)
-    - [`read()`](#read)
-    - [`write()`](#write)
-    - [`get_pos()`](#get_pos)
-    - [`set_pos()`](#set_pos)
-    - [`change_pos()`](#change_pos)
-    - [`align_by()`](#align_by)
-    - [`dump_file()`](#dump_file)
 
 ## Dependencies
 This library includes the following STL headers. Otherwise, no other dependencies are used, although C++23 or newer is required.
