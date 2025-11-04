@@ -1,17 +1,17 @@
 # [binary++](https://github.com/KojoBailey/binary-cpp-library)
-This library for **C++23 and newer** assists reading from and writing to **binary data**, making use of my own experience as a reverse engineer.
+This library for **C++23** assists reading from and writing to **binary data**, making use of my own experience as a reverse engineer.
 
 It aims to:
 - Make use of modern C++ features where **useful** (e.g. `std::endian` and `std::expected`).
 - Be as **open-purposed** as possible for a wide range of use cases.
 - Mirror the **standard library's style** for interface, although with **[result types](https://en.wikipedia.org/wiki/Result_type)**.
-- Receive updates as necessary.
 
 **WARNING:** The documentation is currently a bit outdated. Will update soon!
 
 ## Table of Contents
 - [Dependencies](#dependencies)
 - [Usage](#usage)
+- [Examples](#examples)
 - [Documentation](#documentation)
     - [`binary()`](#binary-1)
     - [`load()`](#load)
@@ -28,36 +28,35 @@ It aims to:
     - [`dump_file()`](#dump_file)
 
 ## Dependencies
-Here is the full list of includes used by this library:
+This library includes the following STL headers. Otherwise, no other dependencies are used, although C++23 or newer is required.
+
 ```cpp
+#include <algorithm>
 #include <bit>
 #include <cstdint>
 #include <cstring>
+#include <expected>
 #include <filesystem>
 #include <fstream>
 #include <string_view>
 #include <vector>
 ```
 
-Otherwise, no external dependencies are used.
-
 ## Usage
-With a single header file at only ~10KB, it's very easy to start using this library. It also has support for **CMake**.
+With a single header file of only ~14KB, this library is easy to include in projects. Additionally, it supports **CMake** for both one-time use and system install.
+
+To begin using the library, simply include the header:
 
 ```cpp
 #include <kojo/binary.hpp>
 ```
 
-Two **classes**, `binary` and `binary_view`, are provided under the `kojo` namespace, similar to how the C++ STL has `std::string` and `std::string_view`.
-* The purpose of `kojo::binary` is to **store** and **write** binary data, allowing loading from a **file path**, a **memory address**, or another `kojo::binary` object.
-* The purpose of `kojo::binary_view` is to **read** binary data *without* storage or modification, allowing loads from a **memory address** or `kojo::binary` object.
+The two classes `binary` and `binary_view` are provided under the `kojo` namespace, inteded to resemble the STL's `std::string` and `std::string_view`.
+* `kojo::binary` is to **store** and **write** binary data.
+* `kojo::binary_view` is to **read** binary data *without* storage or mutation.
 
-```cpp
-class binary;
-class binary_view;
-```
+The library also offers **abbreviations** which you can optionally enable by `using` the `kojo::binary_types` namespace.
 
-This library also offers **abbreviations** which you can enable optionally by `using` the `kojo::binary_types` namespace. Please note that the float types currently use the GCC/Clang options, which will be replaced with the floats from C++23's `<stdfloat>` header once I get my hands on it.
 ```cpp
 namespace kojo::binary_types {
     using std::byte;
@@ -76,15 +75,11 @@ namespace kojo::binary_types {
     using sv  = std::string_view;   // Accesses a string without copying it.
 }
 ```
-```
-#include <kojo/binary.hpp>
-using namespace kojo::binary_types;
 
-int main() {
-    kojo::binary foo;
-    foo.write<u32>(23, std::little::endian);
-    foo.write<sv>("Hello, world!");
-}
+Please note that the float types are temporarily using the GCC/Clang options, which I will replace with the floats from C++23's `<stdfloat>` header once I'm able to use it.
+
+## Examples
+(TBD)
 
 ## Documentation
 Here is a list of every publicly-accessible element for the `binary` class, with examples:
