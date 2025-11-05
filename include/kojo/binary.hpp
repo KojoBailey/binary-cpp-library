@@ -388,7 +388,7 @@ public:
 /*~ Reading */
 
 	[[nodiscard]] constexpr auto operator[](std::size_t pos) const noexcept
-	-> std::expected<const std::byte&, error>
+	-> std::expected<std::byte, error>
 	{
 		if (exceeded_size(pos)) {
 			return std::unexpected{error::out_of_bounds};
