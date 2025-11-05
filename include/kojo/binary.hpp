@@ -324,6 +324,7 @@ private:
 	std::streampos m_pos{0};
 };
 
+/* This class does not own memory, similar to std::string_view. */
 class binary_view {
 public:
 /*~ Constructors */
@@ -376,6 +377,14 @@ public:
 		}
 		m_pos = 0;
 	}
+
+	void load(std::span<const std::byte> data, std::streampos start = 0)
+	{
+		m_address = data.data() + start;
+		m_end = m_address + data.size();
+		m_pos = 0;
+	}
+
 	void load(const binary& binary, const std::streampos start = 0, const std::size_t size = no_limit)
 	{
 		m_address = &binary.data()[start];
@@ -402,7 +411,7 @@ public:
 	{
 		const std::streampos target_pos = m_pos + offset;
 
-		if (exceeded_size(target_pos)) {
+		if (exceeded_size(target_pos + sizeof(T) - 1)) {
 			return std::unexpected{error::out_of_bounds};
 		}
 
@@ -418,7 +427,7 @@ public:
 	{
 		const std::streampos target_pos = m_pos + offset;
 
-		if (exceeded_size(target_pos)) {
+		if (exceeded_size(target_pos + sizeof(T) - 1)) {
 			return std::unexpected{error::out_of_bounds};
 		}
 
@@ -433,7 +442,7 @@ public:
 	{
 		const std::streampos target_pos = m_pos + offset;
 
-		if (exceeded_size(target_pos)) {
+		if (exceeded_size(target_pos + sizeof(T) - 1)) {
 			return std::unexpected{error::out_of_bounds};
 		}
 
@@ -449,7 +458,7 @@ public:
 	{
 		const std::streampos target_pos = m_pos + offset;
 
-		if (exceeded_size(target_pos)) {
+		if (exceeded_size(target_pos + sizeof(T) - 1)) {
 			return std::unexpected{error::out_of_bounds};
 		}
 
@@ -463,7 +472,7 @@ public:
 	{
 		const std::streampos target_pos = m_pos + offset;
 
-		if (exceeded_size(target_pos)) {
+		if (exceeded_size(target_pos + sizeof(T) - 1)) {
 			return std::unexpected{error::out_of_bounds};
 		}
 
@@ -563,7 +572,10 @@ public:
 private:
 	[[nodiscard]] bool exceeded_size(const std::streampos target_pos) const
 	{
-		if (!m_end || !m_address) {
+		if (!!m_address) {
+			return true;
+		}
+		if (!m_end) {
 			return false;
 		}
 		return m_address + target_pos > m_end;
