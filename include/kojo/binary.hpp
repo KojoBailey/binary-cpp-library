@@ -458,7 +458,7 @@ public:
 	{
 		const std::streampos target_pos = m_pos + offset;
 
-		if (exceeded_size(target_pos + sizeof(T) - 1)) {
+		if (exceeded_size(target_pos)) {
 			return std::unexpected{error::out_of_bounds};
 		}
 
@@ -534,12 +534,12 @@ public:
 
 /*~ Data */
 
-	[[nodiscard]] const std::byte* data() const
+	[[nodiscard]] constexpr const std::byte* data() const noexcept
 	{
 		return m_address;
 	}
 
-	[[nodiscard]] bool is_empty() const
+	[[nodiscard]] constexpr bool is_empty() const noexcept
 	{
 		return m_address == nullptr;
 	}
