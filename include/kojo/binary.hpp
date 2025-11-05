@@ -140,11 +140,11 @@ public:
 		std::size_t actual_length = (length == 0) ? calculated_length : std::min(length, calculated_length);
 		std::size_t padding = (length > actual_length) ? length - actual_length : 0;
 
-		if (m_pos + actual_length + padding > m_storage->size()) {
-			m_storage->resize(m_pos + actual_length + padding);
+		if (m_pos + actual_length + padding > m_storage.size()) {
+			m_storage.resize(m_pos + actual_length + padding);
 		}
-		std::memcpy(m_storage->data() + m_pos, value.data(), actual_length);
-		std::memset(m_storage->data() + m_pos + actual_length, '\0', padding);
+		std::memcpy(m_storage.data() + m_pos, value.data(), actual_length);
+		std::memset(m_storage.data() + m_pos + actual_length, '\0', padding);
 		m_pos += actual_length + padding;
 	}
 
@@ -152,10 +152,10 @@ public:
 	void write(const T value)
 	{
 		constexpr std::streamoff value_size = sizeof(std::byte);
-		if (m_pos + value_size > m_storage->size()) {
-			m_storage->resize(m_pos + value_size);
+		if (m_pos + value_size > m_storage.size()) {
+			m_storage.resize(m_pos + value_size);
 		}
-		std::memcpy(m_storage->data() + m_pos, &value, value_size);
+		std::memcpy(m_storage.data() + m_pos, &value, value_size);
 		m_pos += value_size;
 	}
 
@@ -163,19 +163,19 @@ public:
 	void write(T value, const std::endian endianness)
 	{
 		constexpr std::streamoff value_size = sizeof(T);
-		if (m_pos + value_size > m_storage->size()) {
-			m_storage->resize(m_pos + value_size);
+		if (m_pos + value_size > m_storage.size()) {
+			m_storage.resize(m_pos + value_size);
 		}
 
 		value = set_endian(value, endianness);
-		std::memcpy(m_storage->data() + m_pos, &value, value_size);
+		std::memcpy(m_storage.data() + m_pos, &value, value_size);
 		m_pos += value_size;
 	}
 
 	void dump_file(const std::filesystem::path& output_path) const
 	{
 		std::ofstream file_output{output_path, std::ios::binary};
-		file_output.write(reinterpret_cast<const char*>(m_storage->data()), m_storage->size());
+		file_output.write(reinterpret_cast<const char*>(m_storage.data()), m_storage.size());
 	}
 
 	template <std::integral T>
@@ -190,22 +190,22 @@ public:
 
 	[[nodiscard]] std::size_t size() const
 	{
-		return m_storage->size();
+		return m_storage.size();
 	}
 
-	[[nodiscard]] std::shared_ptr<std::vector<std::byte>> storage() const
+	[[nodiscard]] std::vector<std::byte> storage() const
 	{
 		return m_storage;
 	}
 
 	[[nodiscard]] const std::byte* data() const
 	{
-		return m_storage->data();
+		return m_storage.data();
 	}
 
 	[[nodiscard]] bool is_empty() const
 	{
-		return m_storage->empty();
+		return m_storage.empty();
 	}
 
 /*~ Positioning */
@@ -227,7 +227,7 @@ public:
 
 	void go_to_end()
 	{
-		m_pos = m_storage->size();
+		m_pos = m_storage.size();
 	}
 
 	void align_by(std::streamoff bytes)
@@ -240,7 +240,7 @@ public:
 
 	void reserve(std::size_t size)
 	{
-		m_storage->reserve(size);
+		m_storage.reserve(size);
 	}
 
 private:
@@ -263,7 +263,7 @@ private:
 			return std::unexpected{error::file_not_open};
 		}
 
-		m_storage->clear();
+		m_storage.clear();
 		m_pos = 0;
 
 		if (size == 0) {
@@ -277,15 +277,15 @@ private:
 		file.seekg(start_pos);
 
 		try {
-			m_storage->resize(size);
+			m_storage.resize(size);
 		} catch (const std::bad_alloc&) {
 			return std::unexpected{error::insufficient_memory};
 		}
-		file.read(reinterpret_cast<char*>(m_storage->data()), size);
+		file.read(reinterpret_cast<char*>(m_storage.data()), size);
 
 		const std::streamsize actual_file_size  = file.gcount();
 		if (actual_file_size != size) {
-			m_storage->resize(actual_file_size);
+			m_storage.resize(actual_file_size);
 		}
 
 		return {};
@@ -301,7 +301,7 @@ private:
 			return std::unexpected{error::null_pointer};
 		}
 
-		m_storage->clear();
+		m_storage.clear();
 		m_pos = 0;
 
 		if (size == 0) {
@@ -309,18 +309,18 @@ private:
 		}
 
 		try {
-			m_storage->resize(size);
+			m_storage.resize(size);
 		} catch (const std::bad_alloc&) {
 			return std::unexpected{error::insufficient_memory};
 		}
-		std::memcpy(m_storage->data(), byte_stream + start_pos, size);
+		std::memcpy(m_storage.data(), byte_stream + start_pos, size);
 
 		return {};
 	}
 
 	static constexpr std::size_t no_limit = std::numeric_limits<std::size_t>::max();
 
-	std::shared_ptr<std::vector<std::byte>> m_storage{std::make_shared<std::vector<std::byte>>()};
+	std::vector<std::byte> m_storage{};
 	std::streampos m_pos{0};
 };
 
@@ -386,6 +386,15 @@ public:
 	}
 
 /*~ Reading */
+
+	[[nodiscard]] constexpr auto operator[](std::size_t pos) const noexcept
+	-> std::expected<const std::byte&, error>
+	{
+		if (exceeded_size(pos)) {
+			return std::unexpected{error::out_of_bounds};
+		}
+		return m_address[pos];
+	}
 
 	template<std::integral T>
 	[[nodiscard]] auto peek(const std::endian endianness, const std::streamoff offset = 0) const
