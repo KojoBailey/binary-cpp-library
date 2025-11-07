@@ -39,7 +39,7 @@ To begin using the library, simply include the header:
 #include <kojo/binary.hpp>
 ```
 
-The two classes `binary` and `binary_view` are provided under the `kojo` namespace, inteded to resemble the STL's `std::string` and `std::string_view`.
+The two classes `binary` and `binary_view` are provided under the `kojo` namespace, inteded to resemble the STD's `std::string` and `std::string_view`.
 * `kojo::binary` is to **store** and **write** binary data.
 * `kojo::binary_view` is to **read** binary data *without* storage or mutation.
 
