@@ -23,9 +23,13 @@ namespace binary_types {
 	using i16 = std::int16_t;       // 16-bit signed    (-32,768 - 32,767)
 	using i32 = std::int32_t;       // 32-bit signed    (-2,147,483,648 - 2,147,483,647)
 	using i64 = std::int64_t;       // 64-bit signed    (-9,223,372,036,854,775,808 - 9,223,372,036,854,775,807)
+	
+	#ifndef KOJO_BINARY_LIB_FLOATS
 	using f16 = _Float16;
 	using f32 = _Float32;
 	using f64 = _Float64;
+	#endif
+
 	using str = std::string;        // Stores its own copy of a string.
 	using sv  = std::string_view;   // Accesses a string without copying it.
 }
