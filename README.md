@@ -151,7 +151,7 @@ int main()
 {
     kojo::binary_view file_data{/* some file data */};
 
-    auto unknown_integer = file_data.peek<std::uint64_t, 420>(std::endian::little)
+    auto unknown_integer = file_data.peek_at<std::uint64_t>(std::endian::little, 420)
         .or_else(handle_error<std::uint64_t>);
 	if (!unknown_integer) return 1;
 	std::cout << *unknown_integer << std::endl;
