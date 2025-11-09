@@ -350,6 +350,7 @@ public:
 		invalid_file_size,      // The specified size was invalid for whatever reason.
 		null_pointer,           // Pointer argument is null and cannot be used.
 		insufficient_memory,    // Ran out of memory while trying to resize.
+		out_of_bounds,		// Tried to access data outside of the object.
 	};
 
 /*~ Loading */
@@ -511,6 +512,16 @@ public:
 		m_storage.reserve(size);
 	}
 
+/*~ Reading */
+	[[nodiscard]] constexpr auto operator[](std::size_t pos) const noexcept
+	-> std::expected<std::byte, error>
+	{
+		if (pos > m_storage.size()) {
+			return std::unexpected{error::out_of_bounds};
+		}
+		return m_storage[pos];
+	}
+
 private:
 	auto load_file_path(
 		const std::filesystem::path& file_path,
@@ -590,8 +601,6 @@ private:
 
 	std::vector<std::byte> m_storage{};
 	std::streampos m_pos{0};
-
-	binary_view m_reader;
 };
 
 }
