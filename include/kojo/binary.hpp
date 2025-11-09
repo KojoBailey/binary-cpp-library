@@ -131,12 +131,10 @@ public:
 		return m_address[pos];
 	}
 
-	template<std::integral T>
-	[[nodiscard]] auto peek(const std::endian endianness, const std::streamoff offset = 0) const
+	template <std::integral T>
+	[[nodiscard]] auto peek_at(const std::endian endianness, const std::streamoff target_pos) const
 	-> std::expected<T, error>
 	{
-		const std::streampos target_pos = m_pos + offset;
-
 		if (exceeded_size(target_pos + sizeof(T) - 1)) {
 			return std::unexpected{error::out_of_bounds};
 		}
@@ -148,11 +146,9 @@ public:
 	}
 
 	template<std::same_as<std::byte> T>
-	[[nodiscard]] auto peek(const std::streamoff offset = 0) const
+	[[nodiscard]] auto peek_at(const std::streamoff target_pos) const
 	-> std::expected<T, error>
 	{
-		const std::streampos target_pos = m_pos + offset;
-
 		if (exceeded_size(target_pos + sizeof(T) - 1)) {
 			return std::unexpected{error::out_of_bounds};
 		}
@@ -163,11 +159,9 @@ public:
 
 	// Strings of explicit length (copy).
 	template<std::same_as<std::string> T>
-	[[nodiscard]] auto peek(const std::size_t size, const std::streamoff offset = 0) const
+	[[nodiscard]] auto peek_at(const std::size_t size, const std::streamoff target_pos) const
 	-> std::expected<T, error>
 	{
-		const std::streampos target_pos = m_pos + offset;
-
 		if (exceeded_size(target_pos + sizeof(T) - 1)) {
 			return std::unexpected{error::out_of_bounds};
 		}
@@ -179,11 +173,9 @@ public:
 
 	// Null-terminated strings (reference).
 	template<std::same_as<std::string_view> T>
-	[[nodiscard]] auto peek(const std::streamoff offset = 0) const
+	[[nodiscard]] auto peek_at(const std::streamoff target_pos) const
 	-> std::expected<T, error>
 	{
-		const std::streampos target_pos = m_pos + offset;
-
 		if (exceeded_size(target_pos)) {
 			return std::unexpected{error::out_of_bounds};
 		}
@@ -193,11 +185,9 @@ public:
 	}
 
 	template<typename T>
-	[[nodiscard]] auto peek_struct(const std::streamoff offset = 0) const
+	[[nodiscard]] auto peek_struct_at(const std::streamoff target_pos) const
 	-> std::expected<T, error>
 	{
-		const std::streampos target_pos = m_pos + offset;
-
 		if (exceeded_size(target_pos + sizeof(T) - 1)) {
 			return std::unexpected{error::out_of_bounds};
 		}
@@ -205,6 +195,43 @@ public:
 		T result;
 		std::memcpy(&result, &m_address[target_pos], sizeof(T));
 		return result;
+	}
+
+	template<std::integral T>
+	[[nodiscard]] auto peek(const std::endian endianness, const std::streamoff offset = 0) const
+	-> std::expected<T, error>
+	{
+		return peek_at<T>(endianness, m_pos + offset);
+	}
+
+	template<std::same_as<std::byte> T>
+	[[nodiscard]] auto peek(const std::streamoff offset = 0) const
+	-> std::expected<T, error>
+	{
+		return peek_at<T>(m_pos + offset);
+	}
+
+	// Strings of explicit length (copy).
+	template<std::same_as<std::string> T>
+	[[nodiscard]] auto peek(const std::size_t size, const std::streamoff offset = 0) const
+	-> std::expected<T, error>
+	{
+		return peek_at<T>(size, m_pos + offset);
+	}
+
+	// Null-terminated strings (reference).
+	template<std::same_as<std::string_view> T>
+	[[nodiscard]] auto peek(const std::streamoff offset = 0) const
+	-> std::expected<T, error>
+	{
+		return peek_at<T>(m_pos + offset);
+	}
+
+	template<typename T>
+	[[nodiscard]] auto peek_struct(const std::streamoff offset = 0) const
+	-> std::expected<T, error>
+	{
+		return peek_struct_at<T>(m_pos + offset);
 	}
 
 	template<std::integral T>
