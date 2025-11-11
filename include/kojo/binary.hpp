@@ -280,7 +280,7 @@ public:
 	[[nodiscard]] auto read_struct()
 	-> std::expected<T, error>
 	{
-		const auto result = peek<T>();
+		const auto result = peek_struct<T>();
 		m_pos += sizeof(T);
 		return result;
 	}
