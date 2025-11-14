@@ -304,22 +304,22 @@ public:
 		return m_pos;
 	}
 
-	void set_pos(std::streampos new_pos)
+	void set_pos(const std::streampos new_pos)
 	{
 		m_pos = new_pos;
 	}
 
-	void change_pos(std::streamoff offset)
+	void change_pos(const std::streamoff offset)
 	{
 		m_pos += offset;
 	}
 
-	void align_by(std::streamoff bytes)
+	void align_by(const std::streamoff bytes)
 	{
 		const std::size_t remainder = m_pos % bytes;
 		if (remainder) {
 			m_pos += bytes - remainder;
-		}
+		}	
 	}
 
 private:
