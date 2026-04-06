@@ -369,6 +369,11 @@ public:
 		load(src, start);
 	}
 
+	binary_view(std::span<const std::byte> data, std::streampos start = 0)
+	{
+		load(data, start);
+	}
+
 	binary_view(const binary& binary, const std::streampos start = 0)
 	{
 		load(binary, start);
