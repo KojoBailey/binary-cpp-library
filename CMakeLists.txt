@@ -28,8 +28,8 @@ install(EXPORT binaryTargets
 )
 
 # sandbox for manual testing
-option(BUILD_SANDBOX "Build the sandbox executable." ON)
-if (BUILD_SANDBOX)
-	add_executable(binary_lib_test test/main.cpp)
-	target_link_libraries(binary_lib_test PRIVATE binary)
-endif()
+# option(BUILD_SANDBOX "Build the sandbox executable." ON)
+# if (BUILD_SANDBOX)
+# 	add_executable(binary_lib_test test/main.cpp)
+# 	target_link_libraries(binary_lib_test PRIVATE binary)
+# endif()
