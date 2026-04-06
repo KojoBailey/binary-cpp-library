@@ -50,6 +50,295 @@ template<std::integral T>
 
 }
 
+class binary {
+public:
+/*~ Constructors */ 
+
+	binary() = default;
+
+	binary(const binary& other) = default;
+
+	binary& operator=(const binary& other) = default;
+
+	~binary() = default;
+
+	binary(binary&& other) noexcept :
+		m_storage(std::move(other.m_storage)),
+		m_pos(other.m_pos) {}
+
+	binary& operator=(binary&& other) noexcept
+	{
+		if (this != &other) {
+			m_storage = std::move(other.m_storage);
+			m_pos = other.m_pos;
+		}
+
+		return *this;
+	}
+
+/*~ Error-Handling */
+
+	enum class error {
+		ok = 0,
+		file_not_exist,         // File could not be found at specified path.
+		invalid_file,           // Specified path does not lead to a regular file.
+		file_not_open,          // Attempting to open the specified file failed.
+		invalid_file_size,      // The specified size was invalid for whatever reason.
+		null_pointer,           // Pointer argument is null and cannot be used.
+		insufficient_memory,    // Ran out of memory while trying to resize.
+		out_of_bounds,		// Tried to access data outside of the object.
+	};
+
+/*~ Loading */
+	
+	[[nodiscard]] static auto load(
+		const std::filesystem::path& file_path,
+		std::size_t size = no_limit,
+		const std::streamoff start_pos = 0
+	) -> std::expected<binary, error>
+	{
+		binary result;
+		if (auto check = result.load_file_path(file_path, size, start_pos); !check) {
+			return std::unexpected{check.error()};
+		}
+		return result;
+	}
+
+	[[nodiscard]] static auto load(
+		const std::byte* byte_stream,
+		const std::size_t size,
+		const std::streamoff start_pos = 0
+	) -> std::expected<binary, error>
+	{
+		binary result;
+		if (auto check = result.load_byte_stream(byte_stream, size, start_pos); !check) {
+			return std::unexpected{check.error()};
+		}
+		return result;
+	}
+
+	[[nodiscard]] static auto load(
+		const std::vector<std::byte>& vec,
+		const std::size_t size = no_limit,
+		const std::streamoff start_pos = 0
+	) -> std::expected<binary, error>
+	{
+		binary result;
+		std::size_t true_size = (size == no_limit) ? vec.size() : size;
+		if (auto check = result.load_byte_stream(vec.data(), true_size, start_pos); !check) {
+			return std::unexpected{check.error()};
+		}
+		return result;
+	}
+
+/*~ Writing */
+
+	template <std::same_as<std::string_view> T>
+	void write(T value, const std::size_t length = 0)
+	{
+		const size_t calculated_length = value.size();
+
+		if (calculated_length == 0) {
+			return;
+		}
+		
+		std::size_t actual_length = (length == 0) ? calculated_length : std::min(length, calculated_length);
+		std::size_t padding = (length > actual_length) ? length - actual_length : 0;
+
+		if (m_pos + actual_length + padding > m_storage.size()) {
+			m_storage.resize(m_pos + actual_length + padding);
+		}
+		std::memcpy(m_storage.data() + m_pos, value.data(), actual_length);
+		std::memset(m_storage.data() + m_pos + actual_length, '\0', padding);
+		m_pos += actual_length + padding;
+	}
+
+	template <std::same_as<std::byte> T>
+	void write(const T value)
+	{
+		constexpr std::streamoff value_size = sizeof(std::byte);
+		if (m_pos + value_size > m_storage.size()) {
+			m_storage.resize(m_pos + value_size);
+		}
+		std::memcpy(m_storage.data() + m_pos, &value, value_size);
+		m_pos += value_size;
+	}
+
+	template<std::integral T>
+	void write(T value, const std::endian endianness)
+	{
+		constexpr std::streamoff value_size = sizeof(T);
+		if (m_pos + value_size > m_storage.size()) {
+			m_storage.resize(m_pos + value_size);
+		}
+
+		value = set_endian(value, endianness);
+		std::memcpy(m_storage.data() + m_pos, &value, value_size);
+		m_pos += value_size;
+	}
+
+	void dump_file(const std::filesystem::path& output_path) const
+	{
+		std::ofstream file_output{output_path, std::ios::binary};
+		file_output.write(reinterpret_cast<const char*>(m_storage.data()), m_storage.size());
+	}
+
+	template <std::integral T>
+	[[nodiscard]] static constexpr T set_endian(const T value, const std::endian endianness) noexcept
+	{
+		return (std::endian::native != endianness)
+			? util::byteswap(value)
+			: value;
+	}
+
+/*~ Storage */
+
+	[[nodiscard]] std::size_t size() const
+	{
+		return m_storage.size();
+	}
+
+	[[nodiscard]] std::vector<std::byte> storage() const
+	{
+		return m_storage;
+	}
+
+	[[nodiscard]] const std::byte* data() const
+	{
+		return m_storage.data();
+	}
+
+	[[nodiscard]] bool is_empty() const
+	{
+		return m_storage.empty();
+	}
+
+/*~ Positioning */
+
+	[[nodiscard]] std::streampos get_pos() const
+	{
+		return m_pos;
+	}
+
+	void set_pos(std::streampos _pos)
+	{
+		m_pos = _pos;
+	}
+
+	void change_pos(std::streamoff offset)
+	{
+		m_pos += offset;
+	}
+
+	void go_to_end()
+	{
+		m_pos = m_storage.size();
+	}
+
+	void align_by(std::streamoff bytes)
+	{
+		const std::size_t remainder = m_pos % bytes;
+		if (remainder != 0) {
+			m_pos += bytes - remainder;
+		}
+	}
+
+	void reserve(std::size_t size)
+	{
+		m_storage.reserve(size);
+	}
+
+/*~ Reading */
+	[[nodiscard]] constexpr auto operator[](std::size_t pos) const noexcept
+	-> std::expected<std::byte, error>
+	{
+		if (pos > m_storage.size()) {
+			return std::unexpected{error::out_of_bounds};
+		}
+		return m_storage[pos];
+	}
+
+private:
+	auto load_file_path(
+		const std::filesystem::path& file_path,
+		std::size_t size = no_limit,
+		const std::streamoff start_pos = 0
+	) -> std::expected<binary, error>
+	{
+		if (!std::filesystem::exists(file_path)) {
+			return std::unexpected{error::file_not_exist};
+		}
+
+		if (!std::filesystem::is_regular_file(file_path)) {
+			return std::unexpected{error::invalid_file};
+		}
+		
+		std::ifstream file{file_path, std::ios::binary};
+		if (!file.is_open()) {
+			return std::unexpected{error::file_not_open};
+		}
+
+		m_storage.clear();
+		m_pos = 0;
+
+		if (size == 0) {
+			return {};
+		}
+
+		if (size == no_limit) {
+			file.seekg(0, std::ios::end);
+			size = file.tellg() - start_pos;
+		}
+		file.seekg(start_pos);
+
+		try {
+			m_storage.resize(size);
+		} catch (const std::bad_alloc&) {
+			return std::unexpected{error::insufficient_memory};
+		}
+		file.read(reinterpret_cast<char*>(m_storage.data()), size);
+
+		const std::streamsize actual_file_size  = file.gcount();
+		if (actual_file_size != size) {
+			m_storage.resize(actual_file_size);
+		}
+
+		return {};
+	}
+
+	auto load_byte_stream(	
+		const std::byte* byte_stream,
+		const std::size_t size,
+		const std::streamoff start_pos = 0
+	) -> std::expected<binary, error>
+	{
+		if (!byte_stream) {
+			return std::unexpected{error::null_pointer};
+		}
+
+		m_storage.clear();
+		m_pos = 0;
+
+		if (size == 0) {
+			return {};
+		}
+
+		try {
+			m_storage.resize(size);
+		} catch (const std::bad_alloc&) {
+			return std::unexpected{error::insufficient_memory};
+		}
+		std::memcpy(m_storage.data(), byte_stream + start_pos, size);
+
+		return {};
+	}
+
+	static constexpr std::size_t no_limit = std::numeric_limits<std::size_t>::max();
+
+	std::vector<std::byte> m_storage{};
+	std::streampos m_pos{0};
+};
+
 /* This class does not own memory, similar to std::string_view. */
 class binary_view {
 public:
@@ -338,295 +627,6 @@ private:
 
 	const std::byte* m_address{nullptr};
 	const std::byte* m_end{nullptr};
-	std::streampos m_pos{0};
-};
-
-class binary {
-public:
-/*~ Constructors */ 
-
-	binary() = default;
-
-	binary(const binary& other) = default;
-
-	binary& operator=(const binary& other) = default;
-
-	~binary() = default;
-
-	binary(binary&& other) noexcept :
-		m_storage(std::move(other.m_storage)),
-		m_pos(other.m_pos) {}
-
-	binary& operator=(binary&& other) noexcept
-	{
-		if (this != &other) {
-			m_storage = std::move(other.m_storage);
-			m_pos = other.m_pos;
-		}
-
-		return *this;
-	}
-
-/*~ Error-Handling */
-
-	enum class error {
-		ok = 0,
-		file_not_exist,         // File could not be found at specified path.
-		invalid_file,           // Specified path does not lead to a regular file.
-		file_not_open,          // Attempting to open the specified file failed.
-		invalid_file_size,      // The specified size was invalid for whatever reason.
-		null_pointer,           // Pointer argument is null and cannot be used.
-		insufficient_memory,    // Ran out of memory while trying to resize.
-		out_of_bounds,		// Tried to access data outside of the object.
-	};
-
-/*~ Loading */
-	
-	[[nodiscard]] static auto load(
-		const std::filesystem::path& file_path,
-		std::size_t size = no_limit,
-		const std::streamoff start_pos = 0
-	) -> std::expected<binary, error>
-	{
-		binary result;
-		if (auto check = result.load_file_path(file_path, size, start_pos); !check) {
-			return std::unexpected{check.error()};
-		}
-		return result;
-	}
-
-	[[nodiscard]] static auto load(
-		const std::byte* byte_stream,
-		const std::size_t size,
-		const std::streamoff start_pos = 0
-	) -> std::expected<binary, error>
-	{
-		binary result;
-		if (auto check = result.load_byte_stream(byte_stream, size, start_pos); !check) {
-			return std::unexpected{check.error()};
-		}
-		return result;
-	}
-
-	[[nodiscard]] static auto load(
-		const std::vector<std::byte>& vec,
-		const std::size_t size = no_limit,
-		const std::streamoff start_pos = 0
-	) -> std::expected<binary, error>
-	{
-		binary result;
-		std::size_t true_size = (size == no_limit) ? vec.size() : size;
-		if (auto check = result.load_byte_stream(vec.data(), true_size, start_pos); !check) {
-			return std::unexpected{check.error()};
-		}
-		return result;
-	}
-
-/*~ Writing */
-
-	template <std::same_as<std::string_view> T>
-	void write(T value, const std::size_t length = 0)
-	{
-		const size_t calculated_length = value.size();
-
-		if (calculated_length == 0) {
-			return;
-		}
-		
-		std::size_t actual_length = (length == 0) ? calculated_length : std::min(length, calculated_length);
-		std::size_t padding = (length > actual_length) ? length - actual_length : 0;
-
-		if (m_pos + actual_length + padding > m_storage.size()) {
-			m_storage.resize(m_pos + actual_length + padding);
-		}
-		std::memcpy(m_storage.data() + m_pos, value.data(), actual_length);
-		std::memset(m_storage.data() + m_pos + actual_length, '\0', padding);
-		m_pos += actual_length + padding;
-	}
-
-	template <std::same_as<std::byte> T>
-	void write(const T value)
-	{
-		constexpr std::streamoff value_size = sizeof(std::byte);
-		if (m_pos + value_size > m_storage.size()) {
-			m_storage.resize(m_pos + value_size);
-		}
-		std::memcpy(m_storage.data() + m_pos, &value, value_size);
-		m_pos += value_size;
-	}
-
-	template<std::integral T>
-	void write(T value, const std::endian endianness)
-	{
-		constexpr std::streamoff value_size = sizeof(T);
-		if (m_pos + value_size > m_storage.size()) {
-			m_storage.resize(m_pos + value_size);
-		}
-
-		value = set_endian(value, endianness);
-		std::memcpy(m_storage.data() + m_pos, &value, value_size);
-		m_pos += value_size;
-	}
-
-	void dump_file(const std::filesystem::path& output_path) const
-	{
-		std::ofstream file_output{output_path, std::ios::binary};
-		file_output.write(reinterpret_cast<const char*>(m_storage.data()), m_storage.size());
-	}
-
-	template <std::integral T>
-	[[nodiscard]] static constexpr T set_endian(const T value, const std::endian endianness) noexcept
-	{
-		return (std::endian::native != endianness)
-			? util::byteswap(value)
-			: value;
-	}
-
-/*~ Storage */
-
-	[[nodiscard]] std::size_t size() const
-	{
-		return m_storage.size();
-	}
-
-	[[nodiscard]] std::vector<std::byte> storage() const
-	{
-		return m_storage;
-	}
-
-	[[nodiscard]] const std::byte* data() const
-	{
-		return m_storage.data();
-	}
-
-	[[nodiscard]] bool is_empty() const
-	{
-		return m_storage.empty();
-	}
-
-/*~ Positioning */
-
-	[[nodiscard]] std::streampos get_pos() const
-	{
-		return m_pos;
-	}
-
-	void set_pos(std::streampos _pos)
-	{
-		m_pos = _pos;
-	}
-
-	void change_pos(std::streamoff offset)
-	{
-		m_pos += offset;
-	}
-
-	void go_to_end()
-	{
-		m_pos = m_storage.size();
-	}
-
-	void align_by(std::streamoff bytes)
-	{
-		const std::size_t remainder = m_pos % bytes;
-		if (remainder != 0) {
-			m_pos += bytes - remainder;
-		}
-	}
-
-	void reserve(std::size_t size)
-	{
-		m_storage.reserve(size);
-	}
-
-/*~ Reading */
-	[[nodiscard]] constexpr auto operator[](std::size_t pos) const noexcept
-	-> std::expected<std::byte, error>
-	{
-		if (pos > m_storage.size()) {
-			return std::unexpected{error::out_of_bounds};
-		}
-		return m_storage[pos];
-	}
-
-private:
-	auto load_file_path(
-		const std::filesystem::path& file_path,
-		std::size_t size = no_limit,
-		const std::streamoff start_pos = 0
-	) -> std::expected<binary, error>
-	{
-		if (!std::filesystem::exists(file_path)) {
-			return std::unexpected{error::file_not_exist};
-		}
-
-		if (!std::filesystem::is_regular_file(file_path)) {
-			return std::unexpected{error::invalid_file};
-		}
-		
-		std::ifstream file{file_path, std::ios::binary};
-		if (!file.is_open()) {
-			return std::unexpected{error::file_not_open};
-		}
-
-		m_storage.clear();
-		m_pos = 0;
-
-		if (size == 0) {
-			return {};
-		}
-
-		if (size == no_limit) {
-			file.seekg(0, std::ios::end);
-			size = file.tellg() - start_pos;
-		}
-		file.seekg(start_pos);
-
-		try {
-			m_storage.resize(size);
-		} catch (const std::bad_alloc&) {
-			return std::unexpected{error::insufficient_memory};
-		}
-		file.read(reinterpret_cast<char*>(m_storage.data()), size);
-
-		const std::streamsize actual_file_size  = file.gcount();
-		if (actual_file_size != size) {
-			m_storage.resize(actual_file_size);
-		}
-
-		return {};
-	}
-
-	auto load_byte_stream(	
-		const std::byte* byte_stream,
-		const std::size_t size,
-		const std::streamoff start_pos = 0
-	) -> std::expected<binary, error>
-	{
-		if (!byte_stream) {
-			return std::unexpected{error::null_pointer};
-		}
-
-		m_storage.clear();
-		m_pos = 0;
-
-		if (size == 0) {
-			return {};
-		}
-
-		try {
-			m_storage.resize(size);
-		} catch (const std::bad_alloc&) {
-			return std::unexpected{error::insufficient_memory};
-		}
-		std::memcpy(m_storage.data(), byte_stream + start_pos, size);
-
-		return {};
-	}
-
-	static constexpr std::size_t no_limit = std::numeric_limits<std::size_t>::max();
-
-	std::vector<std::byte> m_storage{};
 	std::streampos m_pos{0};
 };
 
