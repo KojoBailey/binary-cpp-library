@@ -1,19 +1,21 @@
-#ifndef KOJO_BINARY_LIB
-#define KOJO_BINARY_LIB
+#ifndef KOJO_BINARY_HPP
+#define KOJO_BINARY_HPP
+
+#include "./binary/error.hpp"
 
 #include <algorithm>
 #include <bit>
 #include <cstdint>
 #include <cstring>
 #include <expected>
-#include <filesystem>
 #include <fstream>
+#include <stdfloat>
 #include <string_view>
 #include <vector>
 
 namespace kojo { /* Kojo Bailey */
 
-namespace binary_types {
+namespace type_abbreviations {
 	using std::byte;
 	using u8  = std::uint8_t;       // 8-bit unsigned   (0 - 255)
 	using u16 = std::uint16_t;      // 16-bit unsigned  (0 - 65,535)
@@ -24,112 +26,60 @@ namespace binary_types {
 	using i32 = std::int32_t;       // 32-bit signed    (-2,147,483,648 - 2,147,483,647)
 	using i64 = std::int64_t;       // 64-bit signed    (-9,223,372,036,854,775,808 - 9,223,372,036,854,775,807)
 	
-	#ifndef KOJO_BINARY_LIB_FLOATS
-	using f16 = _Float16;
-	using f32 = _Float32;
-	using f64 = _Float64;
-	#endif
-
-	using str = std::string;        // Stores its own copy of a string.
-	using sv  = std::string_view;   // Accesses a string without copying it.
+	using f16  = std::float16_t;    // 16-bit float
+	using bf16 = std::bfloat16_t;   // 16-bit brain float
+	using f32  = std::float32_t;    // 32-bit float
+	using f64  = std::float64_t;    // 64-bit float
+	using f128 = std::float128_t;   // 128-bit float
 }
 
-namespace util {
+// namespace util {
+//
+// template<std::integral T>
+// [[nodiscard]] constexpr T byteswap(const T value) noexcept
+// {
+// 	static_assert(std::has_unique_object_representations_v<T>, "T may not have padding bits");
+// 	std::uint8_t buffer[sizeof(T)];
+// 	std::memcpy(buffer, &value, sizeof(T));
+// 	std::ranges::reverse(buffer);
+// 	T result;
+// 	std::memcpy(&result, buffer, sizeof(T));
+// 	return result;
+// }
+//
+// }
 
-template<std::integral T>
-[[nodiscard]] constexpr T byteswap(const T value) noexcept
-{
-	static_assert(std::has_unique_object_representations_v<T>, "T may not have padding bits");
-	std::uint8_t buffer[sizeof(T)];
-	std::memcpy(buffer, &value, sizeof(T));
-	std::ranges::reverse(buffer);
-	T result;
-	std::memcpy(&result, buffer, sizeof(T));
-	return result;
-}
-
-}
-
-class binary {
+class Binary {
 public:
-/*~ Constructors */ 
+	Binary() = default;
 
-	binary() = default;
+	Binary(const Binary& other) = default;
 
-	binary(const binary& other) = default;
+	Binary& operator=(const Binary& other) = default;
 
-	binary& operator=(const binary& other) = default;
+	Binary(Binary&& other) noexcept :
+		storage(std::move(other.m_storage)),
+		pos(other.pos) {}
 
-	~binary() = default;
-
-	binary(binary&& other) noexcept :
-		m_storage(std::move(other.m_storage)),
-		m_pos(other.m_pos) {}
-
-	binary& operator=(binary&& other) noexcept
+	Binary& operator=(Binary&& other) noexcept
 	{
 		if (this != &other) {
-			m_storage = std::move(other.m_storage);
-			m_pos = other.m_pos;
+			storage = std::move(other.storage);
+			pos = other.pos;
 		}
 
 		return *this;
 	}
 
-/*~ Error-Handling */
+	~Binary() = default;
 
-	enum class error {
-		ok = 0,
-		file_not_exist,         // File could not be found at specified path.
-		invalid_file,           // Specified path does not lead to a regular file.
-		file_not_open,          // Attempting to open the specified file failed.
-		invalid_file_size,      // The specified size was invalid for whatever reason.
-		null_pointer,           // Pointer argument is null and cannot be used.
-		insufficient_memory,    // Ran out of memory while trying to resize.
-		out_of_bounds,		// Tried to access data outside of the object.
-	};
+	[[nodiscard]] static auto load_from_path(
+		const std::filesystem::path& file_path
+	) -> std::expected<Binary, BinaryError>;
 
-/*~ Loading */
-	
-	[[nodiscard]] static auto load(
-		const std::filesystem::path& file_path,
-		std::size_t size = no_limit,
-		const std::streamoff start_pos = 0
-	) -> std::expected<binary, error>
-	{
-		binary result;
-		if (auto check = result.load_file_path(file_path, size, start_pos); !check) {
-			return std::unexpected{check.error()};
-		}
-		return result;
-	}
-
-	[[nodiscard]] static auto load(
-		const std::byte* byte_stream,
-		const std::size_t size,
-		const std::streamoff start_pos = 0
-	) -> std::expected<binary, error>
-	{
-		binary result;
-		if (auto check = result.load_byte_stream(byte_stream, size, start_pos); !check) {
-			return std::unexpected{check.error()};
-		}
-		return result;
-	}
-
-	[[nodiscard]] static auto load(
-		const std::vector<std::byte>& vec,
-		const std::size_t size = no_limit,
-		const std::streamoff start_pos = 0
-	) -> std::expected<binary, error>
-	{
-		binary result;
-		std::size_t true_size = (size == no_limit) ? vec.size() : size;
-		if (auto check = result.load_byte_stream(vec.data(), true_size, start_pos); !check) {
-			return std::unexpected{check.error()};
-		}
-		return result;
-	}
+	[[nodiscard]] static auto load_from_span(
+		std::span<const std::byte> span,
+	) -> std::expected<Binary, BinaryError>;
 
 /*~ Writing */
 
@@ -261,7 +211,7 @@ public:
 private:
 	auto load_file_path(
 		const std::filesystem::path& file_path,
-		std::size_t size = no_limit,
+		std::size_t size = size_max,
 		const std::streamoff start_pos = 0
 	) -> std::expected<binary, error>
 	{
@@ -285,7 +235,7 @@ private:
 			return {};
 		}
 
-		if (size == no_limit) {
+		if (size == size_max) {
 			file.seekg(0, std::ios::end);
 			size = file.tellg() - start_pos;
 		}
@@ -293,7 +243,8 @@ private:
 
 		try {
 			m_storage.resize(size);
-		} catch (const std::bad_alloc&) {
+		}
+		catch (const std::bad_alloc&) {
 			return std::unexpected{error::insufficient_memory};
 		}
 		file.read(reinterpret_cast<char*>(m_storage.data()), size);
@@ -333,10 +284,10 @@ private:
 		return {};
 	}
 
-	static constexpr std::size_t no_limit = std::numeric_limits<std::size_t>::max();
+	static constexpr std::size_t size_max = std::numeric_limits<std::size_t>::max();
 
-	std::vector<std::byte> m_storage{};
-	std::streampos m_pos{0};
+	std::vector<std::byte> storage{};
+	std::streampos pos{0};
 };
 
 /* This class does not own memory, similar to std::string_view. */
@@ -389,10 +340,10 @@ public:
 
 /*~ Loading */
 
-	void load(const std::byte* src, const std::streampos start = 0, const std::size_t size = no_limit)
+	void load(const std::byte* src, const std::streampos start = 0, const std::size_t size = size_max)
 	{
 		m_address = &src[start];
-		if (size != no_limit) {
+		if (size != size_max) {
 			m_end = m_address + size;
 		}
 		m_pos = 0;
@@ -405,10 +356,10 @@ public:
 		m_pos = 0;
 	}
 
-	void load(const binary& binary, const std::streampos start = 0, const std::size_t size = no_limit)
+	void load(const binary& binary, const std::streampos start = 0, const std::size_t size = size_max)
 	{
 		m_address = &binary.data()[start];
-		if (size == no_limit) {
+		if (size == size_max) {
 			m_end = m_address + binary.size();
 		}
 		m_pos = 0;
@@ -628,7 +579,7 @@ private:
 		return m_address + target_pos > m_end;
 	}
 
-	static constexpr std::size_t no_limit = std::numeric_limits<std::size_t>::max();
+	static constexpr std::size_t size_max = std::numeric_limits<std::size_t>::max();
 
 	const std::byte* m_address{nullptr};
 	const std::byte* m_end{nullptr};
