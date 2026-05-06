@@ -25,40 +25,42 @@ No dependencies outside of the C++ standard library up to C++23 are used.
 Depending on what features come in C++26, once it is more widely supported, I may update this library to also make use of it.
 
 ## Usage
-With a single header file of only ~14KB, this library is easy to include in projects. Additionally, it supports **CMake** for both one-time use and system install.
+This library should integrate automatically with **CMake**. I neither use nor have tested other build systems.
 
-To begin using the library, simply include the header:
+Once set up, simply include the following header:
 
 ```cpp
 #include <kojo/binary.hpp>
 ```
 
-The two classes `binary` and `binary_view` are provided under the `kojo` namespace, inteded to resemble the STD's `std::string` and `std::string_view`.
+This provides two classes under the `kojo` namespace: `Binary` and `BinaryView`, similar to how the standard library provides both `std::string` and `std::string_view`.
 * `kojo::binary` is to **store** and **write** binary data.
 * `kojo::binary_view` is to **read** binary data *without* storage or mutation.
 
-The library also offers **abbreviations** which you can optionally enable by `using` the `kojo::binary_types` namespace.
+The library also offers **abbreviations** which can be optionally enabled by `using` the `kojo::type_abbreviations` namespace.
 
 ```cpp
-namespace kojo::binary_types {
-    using std::byte;
-    using u8  = std::uint8_t;       // 8-bit unsigned   (0 - 255)
-    using u16 = std::uint16_t;      // 16-bit unsigned  (0 - 65,535)
-    using u32 = std::uint32_t;      // 32-bit unsigned  (0 - 4,294,967,295)
-    using u64 = std::uint64_t;      // 64-bit unsigned  (0 - 18,446,744,073,709,551,615)
-    using i8  = std::int8_t;        // 8-bit signed     (-128 - 127)
-    using i16 = std::int16_t;       // 16-bit signed    (-32,768 - 32,767)
-    using i32 = std::int32_t;       // 32-bit signed    (-2,147,483,648 - 2,147,483,647)
-    using i64 = std::int64_t;       // 64-bit signed    (-9,223,372,036,854,775,808 - 9,223,372,036,854,775,807)
-    using f16 = _Float16;
-    using f32 = _Float32;
-    using f64 = _Float64;
-    using str = std::string;        // Stores its own copy of a string.
-    using sv  = std::string_view;   // Accesses a string without copying it.
+namespace type_abbreviations {
+	using std::byte;
+	using u8  = std::uint8_t;
+	using u16 = std::uint16_t;
+	using u32 = std::uint32_t;
+	using u64 = std::uint64_t;
+	using i8  = std::int8_t;
+	using i16 = std::int16_t;
+	using i32 = std::int32_t;
+	using i64 = std::int64_t;
+	
+	using f16  = std::float16_t;
+	using bf16 = std::bfloat16_t;
+	using f32  = std::float32_t;
+	using f64  = std::float64_t;
+	using f128 = std::float128_t;
 }
 ```
 
-Please note that the float types are temporarily using the GCC/Clang options, which I will replace with the floats from C++23's `<stdfloat>` header once I'm able to use it.
+> [!NOTE]
+> The floats are from C++23's [`<stdfloat>`](https://en.cppreference.com/cpp/header/stdfloat) header.
 
 ## Examples
 The following examples should help to illustrate different use-cases for the library.
