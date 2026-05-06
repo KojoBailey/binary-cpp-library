@@ -20,19 +20,9 @@ It aims to:
 - [Examples](#examples)
 
 ## Dependencies
-This library includes the following STL headers. Otherwise, no other dependencies are used, although C++23 or newer is required.
+No dependencies outside of the C++ standard library up to C++23 are used.
 
-```cpp
-#include <algorithm>
-#include <bit>
-#include <cstdint>
-#include <cstring>
-#include <expected>
-#include <filesystem>
-#include <fstream>
-#include <string_view>
-#include <vector>
-```
+Depending on what features come in C++26, once it is more widely supported, I may update this library to also make use of it.
 
 ## Usage
 With a single header file of only ~14KB, this library is easy to include in projects. Additionally, it supports **CMake** for both one-time use and system install.
