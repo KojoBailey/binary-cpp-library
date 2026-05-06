@@ -123,12 +123,6 @@ int main()
 }
 ```
 
-> [!IMPORTANT]
-> The `binary_view::read` method automatically advances the position of the reader by the size of the type that is being read. This is a side effect for convenience, although a more pure alternative exists in `binary_view::peek` (see [Example 3](#example-3)).
-
-> [!TIP]
-> As seen at the top, the `kojo::binary_types` namespace is included for convenient aliases such as `str` and `u32`.
-
 ### Example 3
 In this example, a function `handle_error` is defined to allow `.or_else()` use after reading an unsigned 64-bit integer from 420 bytes later in the data. If there is no error, then that number is printed.
 
@@ -145,7 +139,7 @@ handle_error(kojo::binary_view::error err)
 
 int main()
 {
-    kojo::binary_view file_data{/* some file data */};
+    kojo::BinaryView file_data{/* some file data */};
 
     auto unknown_integer = file_data.peek_at<std::uint64_t>(std::endian::little, 420)
         .or_else(handle_error<std::uint64_t>);
@@ -153,6 +147,3 @@ int main()
 	std::cout << *unknown_integer << std::endl;
 }
 ```
-
-> [!NOTE]
-> It is also of course possible to use a lamda, although it can look more messy. An example for that may be added in future.
