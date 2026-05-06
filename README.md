@@ -87,7 +87,7 @@ int main(int argc, char* argv[])
                 std::println(std::cerr, "Could not find file at path \"{}\".", e.get_path());
             },
             [](const BinaryError::InvalidFile& e) {
-                std::println(std::cerr, "File \"{}\" is invalid (may be a directory instead).", e.get_filename());
+                std::println(e.as_string());
             }
         }, maybe_data.error());
         return 1;
