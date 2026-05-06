@@ -83,11 +83,11 @@ int main(int argc, char* argv[])
 	auto maybe_data = Binary::load_from_path(argv[1]);
 	if (!maybe_data) {
         std::visit(overloaded{
-            [](const BinaryError::FileNotFound& e) {
-                std::println(std::cerr, "Could not find file at path \"{}\".", e.get_path());
+            [](const BinaryError::FileNotFound& err) {
+                std::println(std::cerr, "Could not find file at path \"{}\".", err.get_path());
             },
-            [](const BinaryError::InvalidFile& e) {
-                std::println(e.as_string());
+            [](const BinaryError::InvalidFile& err) {
+                std::println(err.as_string());
             }
         }, maybe_data.error());
         return 1;
