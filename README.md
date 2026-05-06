@@ -66,10 +66,12 @@ namespace type_abbreviations {
 The following examples should help to illustrate different use-cases for the library.
 
 ### Example 1
-In this example, a file is loaded from the 2nd argument passed to the executable and checked for errors. If no errors are found, the program will print the file's size.
+A file is loaded from the 2nd argument passed to the executable and checked for errors. If no errors are found, the program will print the file's size.
 
 ```cpp
 #include <kojo/binary.hpp>
+
+using namespace kojo;
 
 int main(int argc, char* argv[])
 {
@@ -78,22 +80,21 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-	auto binary_buffer = kojo::binary::load(argv[1]);
-	if (!binary_buffer) {
-        switch (binary_buffer.error()) {
-        case kojo::binary::error::file_not_exist:
-            std::println("File does not exist.");
-            break;
-        case kojo::binary::error::invalid_file:
-            std::println("File is invalid (may be a folder instead).");
-            break;
-        /* etc. */
-        }
-		return 1;
+	auto maybe_data = Binary::load_from_path(argv[1]);
+	if (!maybe_data) {
+        std::visit(overloaded{
+            [](const BinaryError::FileNotFound& e) {
+                std::println("Could not find file at path \"{}\".", e.get_path());
+            },
+            [](const BinaryError::InvalidFile& e) {
+                std::println("File \"{}\" is invalid (may be a directory instead).", e.get_filename());
+            }
+        }, maybe_data.error());
+        return 1;
 	}
 
-	kojo::binary data = *binary_buffer;
-	std::println("File size: {} B", data.size());
+	Binary data = std::move(*maybe_binary);
+	std::println("File size: {} B", data.get_size());
 }
 ```
 
