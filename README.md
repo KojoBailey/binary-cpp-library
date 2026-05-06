@@ -76,7 +76,7 @@ using namespace kojo;
 int main(int argc, char* argv[])
 {
 	if (argc < 2) {
-        std::println("No file provided.");
+        std::println(std::cerr, "No file provided.");
         return 1;
     }
 
@@ -84,10 +84,10 @@ int main(int argc, char* argv[])
 	if (!maybe_data) {
         std::visit(overloaded{
             [](const BinaryError::FileNotFound& e) {
-                std::println("Could not find file at path \"{}\".", e.get_path());
+                std::println(std::cerr, "Could not find file at path \"{}\".", e.get_path());
             },
             [](const BinaryError::InvalidFile& e) {
-                std::println("File \"{}\" is invalid (may be a directory instead).", e.get_filename());
+                std::println(std::cerr, "File \"{}\" is invalid (may be a directory instead).", e.get_filename());
             }
         }, maybe_data.error());
         return 1;
