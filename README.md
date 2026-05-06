@@ -1,14 +1,18 @@
 # [binary++](https://github.com/KojoBailey/binary-cpp-library)
 
 > [!WARNING]
-> This library is currently in development, and as such, features listed in the documentation may be incomplete or yet to be implemented. However, outdated documentation will be avoided \:)
+> This library is being overhauled, so expect major changes and inconsistent documentation for the timebeing.
 
 This library for **C++23** assists reading from and writing to **binary data**, making use of my own experience as a reverse engineer.
 
 It aims to:
-- Make use of modern C++ features where **useful** (e.g. `std::endian` and `std::expected`).
-- Be as **open-purposed** as possible for a wide range of use cases.
-- Mirror the **standard library's style** for interface, although with **[result types](https://en.wikipedia.org/wiki/Result_type)**.
+- Not hold back from using **modern C++ features** where useful, such as `std::endian` and `std::expected`.
+- Be useful for a **wide variety** of use-cases.
+- Make use of **good practices**, even if they go against the standard library's design, such as:
+    - PascalCase for class names.
+    - [Result types](https://en.wikipedia.org/wiki/Result_type) for error-handling (no Exceptions).
+    - Proper imperative method names, like `.get_size()` instead of `.size()`.
+    - Questions for boolean members and methods, like `.is_empty()` instead of `.empty()`.
 
 ## Table of Contents
 - [Dependencies](#dependencies)
