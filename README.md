@@ -98,29 +98,28 @@ int main(int argc, char* argv[])
 }
 ```
 
-> [!NOTE]
-> `kojo::binary::load` returns an `std::expected<kojo::binary, kojo::binary::error>`. This way of error-handling was chosen over exceptions or forcing the programmer to detect errors manually.
-
 ### Example 2
-In this example, data is loaded into a `binary_view` object named `file_data`. It then reads the first 4 bytes from the file as a string, expecting it to be the file's signature (e.g. `RIFF` for `.wav` files). It will check if the read was successful, and then print an error if it was not. If there was no error, it will print the file signature. Then, it will then attempt to read an unsigned 32-bit integer from the next bytes in the file. If this fails, it simply ignores the error and takes the version as `0` instead via `.value_or(0)`. Whatever value from this attempt is then printed.
+Data is loaded into an instance of `BinaryView`. It then reads the first 4 bytes from the file as a string, expecting it to be the file's signature (e.g. `RIFF` for `.wav` files). It will check if the read was successful, and then print an error if it was not. If there was no error, it will print the file signature. Then, it will then attempt to read an unsigned 32-bit integer from the next bytes in the file. If this fails, it simply ignores the error and takes the version as `0` instead via `.value_or(0)`. Whatever value from this attempt is then printed.
 
 ```cpp
 #include <kojo/binary.hpp>
-using namespace kojo::binary_types;
+
+using namepsace kojo;
+using namespace kojo::type_abbreviations;
 
 int main()
 {
-    kojo::binary_view file_data{/* some file data */};
+    BinaryView file_data{/* some file data */};
 
-    auto file_sig_buffer = file_data.read<str>(4);
-    if (!file_sig_buffer) {
-        std::println("Tried to access null memory.");
+    auto maybe_file_signature = file_data.read_string(4);
+    if (!maybe_file_signature) {
+        std::println(std::cerr, "Tried to access null memory.");
         return 1;
     }
-    std::println("File signature: {}", *file_sig_buffer);
+    std::println("File signature: {}", *maybe_file_signature);
 
-    auto file_ver = file_data.read<u32>(std::endian::big).value_or(0);
-    std::println("File version: {}", file_ver);
+    auto file_version = file_data.read<u32>(std::endian::big).value_or(0);
+    std::println("File version: {}", file_version);
 }
 ```
 
