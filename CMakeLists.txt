@@ -1,7 +1,7 @@
 # metadata & version info
 cmake_minimum_required(VERSION 3.19)
 project(binary VERSION 0.1.0 DESCRIPTION "Library for easily interacting with binary data in C++.")
-set(CMAKE_CXX_STANDARD 23) # -std=c++23
+set(CMAKE_CXX_STANDARD 23)
 
 # .hpp header file
 add_library(binary INTERFACE
@@ -28,8 +28,8 @@ install(EXPORT binaryTargets
 )
 
 # sandbox for manual testing
-# option(BUILD_SANDBOX "Build the sandbox executable." ON)
-# if (BUILD_SANDBOX)
-# 	add_executable(binary_lib_test test/main.cpp)
-# 	target_link_libraries(binary_lib_test PRIVATE binary)
-# endif()
+option(BUILD_SANDBOX "Build the sandbox executable." ON)
+if (BUILD_SANDBOX)
+	add_executable(binary_lib_test test/main.cpp)
+	target_link_libraries(binary_lib_test PRIVATE binary)
+endif()

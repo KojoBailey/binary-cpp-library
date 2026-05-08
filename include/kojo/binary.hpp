@@ -1,7 +1,7 @@
 #ifndef KOJO_BINARY_HPP
 #define KOJO_BINARY_HPP
 
-#include "./binary/error.hpp"
+#include <kojo/binary/detail/error.hpp>
 
 #include <algorithm>
 #include <bit>
@@ -33,7 +33,6 @@ namespace type_abbreviations {
 	using f128 = std::float128_t;
 }
 
-
 class Binary {
 public:
 	Binary() = default;
@@ -43,7 +42,7 @@ public:
 	Binary& operator=(const Binary& other) = default;
 
 	Binary(Binary&& other) noexcept :
-		storage(std::move(other.m_storage)),
+		storage(std::move(other.storage)),
 		pos(other.pos) {}
 
 	Binary& operator=(Binary&& other) noexcept
@@ -58,15 +57,15 @@ public:
 
 	~Binary() = default;
 
-	[[nodiscard]] static auto load_from_path(
-		const std::filesystem::path& file_path
-	) -> std::expected<Binary, BinaryError>;
+	/* --- */
 
-	[[nodiscard]] static auto load_from_span(
-		std::span<const std::byte> span,
-	) -> std::expected<Binary, BinaryError>;
+	[[nodiscard]] static auto from(const std::filesystem::path& file_path)
+		-> std::expected<Binary, BinaryError>;
 
-/*~ Writing */
+	[[nodiscard]] static auto from(std::span<const std::byte> span)
+		-> std::expected<Binary, BinaryError>;
+
+	/* --- */
 
 	template <std::same_as<std::string_view> T>
 	void write(T value, const std::size_t length = 0)
@@ -80,49 +79,49 @@ public:
 		std::size_t actual_length = (length == 0) ? calculated_length : std::min(length, calculated_length);
 		std::size_t padding = (length > actual_length) ? length - actual_length : 0;
 
-		if (m_pos + actual_length + padding > m_storage.size()) {
-			m_storage.resize(m_pos + actual_length + padding);
+		if (pos + actual_length + padding > storage.size()) {
+			storage.resize(pos + actual_length + padding);
 		}
-		std::memcpy(m_storage.data() + m_pos, value.data(), actual_length);
-		std::memset(m_storage.data() + m_pos + actual_length, '\0', padding);
-		m_pos += actual_length + padding;
+		std::memcpy(storage.data() + pos, value.data(), actual_length);
+		std::memset(storage.data() + pos + actual_length, '\0', padding);
+		pos += actual_length + padding;
 	}
 
 	template <std::same_as<std::byte> T>
 	void write(const T value)
 	{
 		constexpr std::streamoff value_size = sizeof(std::byte);
-		if (m_pos + value_size > m_storage.size()) {
-			m_storage.resize(m_pos + value_size);
+		if (pos + value_size > storage.size()) {
+			storage.resize(pos + value_size);
 		}
-		std::memcpy(m_storage.data() + m_pos, &value, value_size);
-		m_pos += value_size;
+		std::memcpy(storage.data() + pos, &value, value_size);
+		pos += value_size;
 	}
 
 	template<std::integral T>
 	void write(T value, const std::endian endianness)
 	{
 		constexpr std::streamoff value_size = sizeof(T);
-		if (m_pos + value_size > m_storage.size()) {
-			m_storage.resize(m_pos + value_size);
+		if (pos + value_size > storage.size()) {
+			storage.resize(pos + value_size);
 		}
 
 		value = set_endian(value, endianness);
-		std::memcpy(m_storage.data() + m_pos, &value, value_size);
-		m_pos += value_size;
+		std::memcpy(storage.data() + pos, &value, value_size);
+		pos += value_size;
 	}
 
 	void dump_file(const std::filesystem::path& output_path) const
 	{
 		std::ofstream file_output{output_path, std::ios::binary};
-		file_output.write(reinterpret_cast<const char*>(m_storage.data()), m_storage.size());
+		file_output.write(reinterpret_cast<const char*>(storage.data()), storage.size());
 	}
 
 	template <std::integral T>
 	[[nodiscard]] static constexpr T set_endian(const T value, const std::endian endianness) noexcept
 	{
 		return (std::endian::native != endianness)
-			? util::byteswap(value)
+			? std::byteswap(value)
 			: value;
 	}
 
@@ -130,67 +129,67 @@ public:
 
 	[[nodiscard]] std::size_t get_size() const
 	{
-		return m_storage.size();
+		return storage.size();
 	}
 
 	[[nodiscard]] std::vector<std::byte> get_storage() const
 	{
-		return m_storage;
+		return storage;
 	}
 
 	[[nodiscard]] const std::byte* get_data() const
 	{
-		return m_storage.data();
+		return storage.data();
 	}
 
 	[[nodiscard]] bool is_empty() const
 	{
-		return m_storage.empty();
+		return storage.empty();
 	}
 
 /*~ Positioning */
 
 	[[nodiscard]] std::streampos get_pos() const
 	{
-		return m_pos;
+		return pos;
 	}
 
 	void set_pos(std::streampos _pos)
 	{
-		m_pos = _pos;
+		pos = _pos;
 	}
 
 	void change_pos(std::streamoff offset)
 	{
-		m_pos += offset;
+		pos += offset;
 	}
 
 	void go_to_end()
 	{
-		m_pos = m_storage.size();
+		pos = storage.size();
 	}
 
 	void align_by(std::streamoff bytes)
 	{
-		const std::size_t remainder = m_pos % bytes;
+		const std::size_t remainder = pos % bytes;
 		if (remainder != 0) {
-			m_pos += bytes - remainder;
+			pos += bytes - remainder;
 		}
 	}
 
 	void reserve(std::size_t size)
 	{
-		m_storage.reserve(size);
+		storage.reserve(size);
 	}
 
 /*~ Reading */
 	[[nodiscard]] constexpr auto operator[](std::size_t pos) const noexcept
-	-> std::expected<std::byte, error>
+	-> std::expected<std::byte, BinaryError>
 	{
-		if (pos > m_storage.size()) {
-			return std::unexpected{error::out_of_bounds};
+		if (pos > storage.size()) {
+			return std::unexpected{ BinaryError::OutOfBounds{} };
 		}
-		return m_storage[pos];
+		return storage[pos];
 	}
 
 private:
@@ -198,23 +197,23 @@ private:
 		const std::filesystem::path& file_path,
 		std::size_t size = size_max,
 		const std::streamoff start_pos = 0
-	) -> std::expected<binary, error>
+	) -> std::expected<Binary, BinaryError>
 	{
 		if (!std::filesystem::exists(file_path)) {
-			return std::unexpected{error::file_not_exist};
+			return std::unexpected{ BinaryError::FileNotFound{} };
 		}
 
 		if (!std::filesystem::is_regular_file(file_path)) {
-			return std::unexpected{error::invalid_file};
+			return std::unexpected{ BinaryError::InvalidFile{} };
 		}
 		
 		std::ifstream file{file_path, std::ios::binary};
 		if (!file.is_open()) {
-			return std::unexpected{error::file_not_open};
+			return std::unexpected{ BinaryError::FileNotOpen{} };
 		}
 
-		m_storage.clear();
-		m_pos = 0;
+		storage.clear();
+		pos = 0;
 
 		if (size == 0) {
 			return {};
@@ -227,16 +226,16 @@ private:
 		file.seekg(start_pos);
 
 		try {
-			m_storage.resize(size);
+			storage.resize(size);
 		}
 		catch (const std::bad_alloc&) {
-			return std::unexpected{error::insufficient_memory};
+			return std::unexpected{ BinaryError::InsufficientMemory{} };
 		}
-		file.read(reinterpret_cast<char*>(m_storage.data()), size);
+		file.read(reinterpret_cast<char*>(storage.data()), size);
 
 		const std::streamsize actual_file_size  = file.gcount();
 		if (actual_file_size != size) {
-			m_storage.resize(actual_file_size);
+			storage.resize(actual_file_size);
 		}
 
 		return {};
@@ -246,25 +245,25 @@ private:
 		const std::byte* byte_stream,
 		const std::size_t size,
 		const std::streamoff start_pos = 0
-	) -> std::expected<binary, error>
+	) -> std::expected<Binary, BinaryError>
 	{
 		if (!byte_stream) {
-			return std::unexpected{error::null_pointer};
+			return std::unexpected{ BinaryError::NullPointer{} };
 		}
 
-		m_storage.clear();
-		m_pos = 0;
+		storage.clear();
+		pos = 0;
 
 		if (size == 0) {
 			return {};
 		}
 
 		try {
-			m_storage.resize(size);
+			storage.resize(size);
 		} catch (const std::bad_alloc&) {
-			return std::unexpected{error::insufficient_memory};
+			return std::unexpected{ BinaryError::InsufficientMemory{} };
 		}
-		std::memcpy(m_storage.data(), byte_stream + start_pos, size);
+		std::memcpy(storage.data(), byte_stream + start_pos, size);
 
 		return {};
 	}
@@ -289,13 +288,13 @@ public:
 
 	binary_view(binary_view&& other) noexcept :
 		m_address(other.m_address),
-		m_pos(other.m_pos) {}
+		pos(other.pos) {}
 
 	binary_view& operator=(binary_view&& other) noexcept
 	{
 		if (this != &other) {
 		m_address = other.m_address;
-		m_pos = other.m_pos;
+		pos = other.pos;
 		}
 		return *this;
 	}
@@ -310,7 +309,7 @@ public:
 		load(data, start);
 	}
 
-	binary_view(const binary& binary, const std::streampos start = 0)
+	binary_view(const Binary& binary, const std::streampos start = 0)
 	{
 		load(binary, start);
 	}
@@ -331,23 +330,23 @@ public:
 		if (size != size_max) {
 			m_end = m_address + size;
 		}
-		m_pos = 0;
+		pos = 0;
 	}
 
 	void load(std::span<const std::byte> data, std::streampos start = 0)
 	{
 		m_address = data.data() + start;
 		m_end = m_address + data.size();
-		m_pos = 0;
+		pos = 0;
 	}
 
-	void load(const binary& binary, const std::streampos start = 0, const std::size_t size = size_max)
+	void load(const Binary& binary, const std::streampos start = 0, const std::size_t size = size_max)
 	{
-		m_address = &binary.data()[start];
+		m_address = &binary.get_data()[start];
 		if (size == size_max) {
-			m_end = m_address + binary.size();
+			m_end = m_address + binary.get_size();
 		}
-		m_pos = 0;
+		pos = 0;
 	}
 
 /*~ Reading */
@@ -371,7 +370,7 @@ public:
 
 		T result;
 		std::memcpy(&result, &m_address[target_pos], sizeof(T));
-		result = binary::set_endian(result, endianness);
+		result = Binary::set_endian(result, endianness);
 		return result;
 	}
 
@@ -431,14 +430,14 @@ public:
 	[[nodiscard]] auto peek(const std::endian endianness, const std::streamoff offset = 0) const
 	-> std::expected<T, error>
 	{
-		return peek_at<T>(endianness, m_pos + offset);
+		return peek_at<T>(endianness, pos + offset);
 	}
 
 	template<std::same_as<std::byte> T>
 	[[nodiscard]] auto peek(const std::streamoff offset = 0) const
 	-> std::expected<T, error>
 	{
-		return peek_at<T>(m_pos + offset);
+		return peek_at<T>(pos + offset);
 	}
 
 	// Strings of explicit length (copy).
@@ -446,7 +445,7 @@ public:
 	[[nodiscard]] auto peek(const std::size_t size, const std::streamoff offset = 0) const
 	-> std::expected<T, error>
 	{
-		return peek_at<T>(size, m_pos + offset);
+		return peek_at<T>(size, pos + offset);
 	}
 
 	// Null-terminated strings (reference).
@@ -454,14 +453,14 @@ public:
 	[[nodiscard]] auto peek(const std::streamoff offset = 0) const
 	-> std::expected<T, error>
 	{
-		return peek_at<T>(m_pos + offset);
+		return peek_at<T>(pos + offset);
 	}
 
 	template<typename T>
 	[[nodiscard]] auto peek_struct(const std::streamoff offset = 0) const
 	-> std::expected<T, error>
 	{
-		return peek_struct_at<T>(m_pos + offset);
+		return peek_struct_at<T>(pos + offset);
 	}
 
 	template<std::integral T>
@@ -469,7 +468,7 @@ public:
 	-> std::expected<T, error>
 	{
 		const auto result = peek<T>(endianness);
-		m_pos += sizeof(T);
+		pos += sizeof(T);
 		return result;
 	}
 
@@ -478,7 +477,7 @@ public:
 	-> std::expected<T, error>
 	{
 		const auto result = peek<T>();
-		m_pos += sizeof(T);
+		pos += sizeof(T);
 		return result;
 	}
 
@@ -488,7 +487,7 @@ public:
 	-> std::expected<T, error>
 	{
 		const auto result = peek<std::string>(size);
-		m_pos += size;
+		pos += size;
 		return result;
 	}
 
@@ -500,7 +499,7 @@ public:
 		const auto result = peek<std::string_view>();
 
 		if (result) {
-			m_pos += (*result).size() + 1;
+			pos += (*result).size() + 1;
 		}
 
 		return result;
@@ -511,7 +510,7 @@ public:
 	-> std::expected<T, error>
 	{
 		const auto result = peek<T>();
-		m_pos += sizeof(T);
+		pos += sizeof(T);
 		return result;
 	}
 
@@ -531,24 +530,24 @@ public:
 
 	[[nodiscard]] std::size_t get_pos() const
 	{
-		return m_pos;
+		return pos;
 	}
 
 	void set_pos(std::streampos new_pos)
 	{
-		m_pos = new_pos;
+		pos = new_pos;
 	}
 
 	void change_pos(std::streamoff offset)
 	{
-		m_pos += offset;
+		pos += offset;
 	}
 
 	void align_by(std::streamoff bytes)
 	{
-		const std::size_t remainder = m_pos % bytes;
+		const std::size_t remainder = pos % bytes;
 		if (remainder) {
-			m_pos += bytes - remainder;
+			pos += bytes - remainder;
 		}
 	}
 
@@ -568,7 +567,7 @@ private:
 
 	const std::byte* m_address{nullptr};
 	const std::byte* m_end{nullptr};
-	std::streampos m_pos{0};
+	std::streampos pos{0};
 };
 
 }

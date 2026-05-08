@@ -1,9 +1,10 @@
-auto Binary::load_from_path(const std::filesystem::path& path)
+#include <kojo/binary.hpp>
+
+auto Binary::from(const std::filesystem::path& path)
 	-> std::expected<Binary, BinaryError>;
 {
-	if (!std::filesystem::exists(path)) return std::unexpected{
-		BinaryError::new_file_not_exist(path)
-	};
+	if (!std::filesystem::exists(path))
+		return std::unexpected{ BinaryError::new_file_not_exist(path) };
 
 	if (!std::filesystem::is_regular_file(path)) {
 		return std::unexpected{error::invalid_file};

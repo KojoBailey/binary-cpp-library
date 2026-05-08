@@ -1,9 +1,15 @@
 # CMake
+build
 build/
+build.ninja
+CMakeCache.txt
+cmake_install.cmake
+CMakeFiles/
+.cmake/
+xfbinConfig.cmake
+xfbinConfigVersion.cmake
+Makefile
 
 # IDE
 .vscode/
 .idea/
-
-# Testing
-test/
