@@ -56,6 +56,9 @@ namespace type_abbreviations {
 	using f32  = std::float32_t;
 	using f64  = std::float64_t;
 	using f128 = std::float128_t;
+
+    using str = std::string;
+    using sv  = std::string_view;
 }
 ```
 
@@ -111,7 +114,7 @@ int main()
 {
     BinaryView file_data{/* some file data */};
 
-    auto maybe_file_signature = file_data.read_string(4);
+    auto maybe_file_signature = file_data.read<sv>(4);
     if (!maybe_file_signature) {
         std::println(std::cerr, "Tried to access null memory.");
         return 1;

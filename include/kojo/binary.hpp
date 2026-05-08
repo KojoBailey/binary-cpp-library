@@ -67,6 +67,7 @@ public:
 	) -> std::expected<Binary, BinaryError>;
 
 /*~ Writing */
+
 	template <std::same_as<std::string_view> T>
 	void write(T value, const std::size_t length = 0)
 	{
