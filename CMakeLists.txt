@@ -3,12 +3,15 @@ cmake_minimum_required(VERSION 3.19)
 project(binary VERSION 0.1.0 DESCRIPTION "Library for easily interacting with binary data in C++.")
 set(CMAKE_CXX_STANDARD 23)
 
-# .hpp header file
-add_library(binary INTERFACE
-	include/kojo/binary.hpp
+# .cpp source files
+set(SOURCES
+	src/binary.cpp
 )
+add_library(binary STATIC ${SOURCES})
+
+# .hpp header files
 target_include_directories(binary
-INTERFACE
+	PUBLIC
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 	$<INSTALL_INTERFACE:include>
 )
