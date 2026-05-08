@@ -67,7 +67,6 @@ public:
 	) -> std::expected<Binary, BinaryError>;
 
 /*~ Writing */
-
 	template <std::same_as<std::string_view> T>
 	void write(T value, const std::size_t length = 0)
 	{
@@ -128,17 +127,17 @@ public:
 
 /*~ Storage */
 
-	[[nodiscard]] std::size_t size() const
+	[[nodiscard]] std::size_t get_size() const
 	{
 		return m_storage.size();
 	}
 
-	[[nodiscard]] std::vector<std::byte> storage() const
+	[[nodiscard]] std::vector<std::byte> get_storage() const
 	{
 		return m_storage;
 	}
 
-	[[nodiscard]] const std::byte* data() const
+	[[nodiscard]] const std::byte* get_data() const
 	{
 		return m_storage.data();
 	}
@@ -314,7 +313,7 @@ public:
 	{
 		load(binary, start);
 	}
-
+	
 /*~ Error-Handling */
 
 	enum class error {
