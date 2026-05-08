@@ -59,6 +59,8 @@ namespace type_abbreviations {
 
     using str = std::string;
     using sv  = std::string_view;
+
+    using std::endian;
 }
 ```
 
@@ -121,7 +123,7 @@ int main()
     }
     std::println("File signature: {}", *maybe_file_signature);
 
-    auto file_version = file_data.read<u32>(std::endian::big).value_or(0);
+    auto file_version = file_data.read<u32>(endian::big).value_or(0);
     std::println("File version: {}", file_version);
 }
 ```
