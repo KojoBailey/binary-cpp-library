@@ -31,6 +31,9 @@ namespace type_abbreviations {
 	using f32  = std::float32_t;
 	using f64  = std::float64_t;
 	using f128 = std::float128_t;
+
+	using str = std::string;
+	using sv = std::string_view;
 }
 
 class Binary {
@@ -352,7 +355,7 @@ public:
 /*~ Reading */
 
 	[[nodiscard]] constexpr auto operator[](std::size_t pos) const noexcept
-	-> std::expected<std::byte, error>
+		-> std::expected<std::byte, error>
 	{
 		if (exceeded_size(pos)) {
 			return std::unexpected{error::out_of_bounds};
