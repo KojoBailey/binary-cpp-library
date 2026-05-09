@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 23)
 # .cpp source files
 set(SOURCES
 	src/binary.cpp
+	src/binary_view.cpp
 )
 add_library(binary STATIC ${SOURCES})
 

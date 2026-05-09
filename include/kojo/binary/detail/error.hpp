@@ -37,7 +37,7 @@ struct BinaryError {
 		const std::size_t size;
 	};
 
-	struct OutOfBounds {
+	struct SizeExceeded {
 		static const std::uint32_t code = 2;
 
 		std::string to_string() const {
@@ -46,12 +46,31 @@ struct BinaryError {
 			);
 		}
 
-		OutOfBounds() = delete;
-		OutOfBounds(const std::size_t _position, const std::size_t _size)
+		SizeExceeded() = delete;
+		SizeExceeded(const std::size_t _position, const std::size_t _size)
 			: position(_position), size(_size) {}
 
 		const std::size_t position;
 		const std::size_t size;
+	};
+
+	struct OutOfBounds {
+		static const std::uint32_t code = 3;
+
+		std::string to_string() const {
+			return std::format(
+				"Tried to access data at address {:08x}, but data ends at address {:08}.",
+				reinterpret_cast<std::size_t>(access_address),
+				reinterpret_cast<std::size_t>(data_end)
+			);
+		}
+
+		OutOfBounds() = delete;
+		OutOfBounds(const std::byte* _access_address, const std::byte* _data_end)
+			: access_address(_access_address), data_end(_data_end) {}
+
+		const std::byte* access_address;
+		const std::byte* data_end;
 	};
 
 	struct FileNotFound {
@@ -101,6 +120,7 @@ struct BinaryError {
 	std::variant<
 		NullPointer,
 		InsufficientMemory,
+		SizeExceeded,
 		OutOfBounds,
 		FileNotFound,
 		InvalidFile,

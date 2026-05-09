@@ -162,7 +162,7 @@ constexpr auto Binary::operator[](std::size_t pos) const noexcept
 {
 	if (pos > storage.size()) {
 		return std::unexpected{
-			BinaryError::OutOfBounds{pos, storage.size()}
+			BinaryError::SizeExceeded{pos, storage.size()}
 		};
 	}
 	return storage[pos];
