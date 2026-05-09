@@ -3,7 +3,6 @@
 
 #include <kojo/binary/detail/error.hpp>
 
-#include <algorithm>
 #include <bit>
 #include <cstdint>
 #include <cstring>
@@ -74,7 +73,7 @@ public:
 	void write(const std::byte value);
 
 	template<std::integral T>
-	void write(T value, const std::endian endianness)
+	void write_internal(T value, const std::endian endianness)
 	{
 		constexpr std::size_t value_size = sizeof(T);
 		if (pos + value_size > storage.size()) {
@@ -144,14 +143,13 @@ public:
 	~BinaryView() = default;
 
 	BinaryView(BinaryView&& other) noexcept :
-		address(other.address),
-		pos(other.pos) {}
+		address(other.address), pos(other.pos) {}
 
 	BinaryView& operator=(BinaryView&& other) noexcept
 	{
 		if (this != &other) {
-		address = other.address;
-		pos = other.pos;
+			address = other.address;
+			pos = other.pos;
 		}
 		return *this;
 	}
@@ -296,7 +294,7 @@ public:
 	}
 
 	template<std::same_as<std::byte> T>
-	[[nodiscard]] auto read(const std::streamoff offset = 0)
+	[[nodiscard]] auto read()
 		-> std::expected<T, BinaryError>
 	{
 		const auto result = peek<T>();
