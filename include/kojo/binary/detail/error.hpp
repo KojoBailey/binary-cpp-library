@@ -7,6 +7,9 @@
 #include <string>
 #include <variant>
 
+template<class... Ts>
+struct overloaded : Ts... { using Ts::operator()...; };
+
 namespace kojo {
 
 struct BinaryError {
