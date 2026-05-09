@@ -63,3 +63,68 @@ auto Binary::from(std::span<const std::byte> span)
 
 	return result;
 }
+
+std::size_t Binary::get_size() const
+{
+	return storage.size();
+}
+
+std::vector<std::byte> Binary::get_storage() const
+{
+	return storage;
+}
+
+const std::byte* Binary::get_data() const
+{
+	return storage.data();
+}
+
+bool Binary::is_empty() const
+{
+	return storage.empty();
+}
+
+std::streampos Binary::get_pos() const
+{
+	return pos;
+}
+
+void Binary::set_pos(std::streampos _pos)
+{
+	pos = _pos;
+}
+
+void Binary::change_pos(std::streamoff offset)
+{
+	pos += offset;
+}
+
+void Binary::go_to_end()
+{
+	pos = storage.size();
+}
+
+void Binary::align_by(std::streamoff bytes)
+{
+	const std::size_t remainder = pos % bytes;
+	if (remainder != 0) {
+		pos += bytes - remainder;
+	}
+}
+
+void Binary::reserve(std::size_t size)
+{
+	storage.reserve(size);
+}
+
+/*~ Reading */
+constexpr auto Binary::operator[](std::size_t pos) const noexcept
+	-> std::expected<std::byte, BinaryError>
+{
+	if (pos > storage.size()) {
+		return std::unexpected{
+			BinaryError::OutOfBounds{pos, storage.size()}
+		};
+	}
+	return storage[pos];
+}

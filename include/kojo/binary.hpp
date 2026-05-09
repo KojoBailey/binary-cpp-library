@@ -54,7 +54,6 @@ public:
 			storage = std::move(other.storage);
 			pos = other.pos;
 		}
-
 		return *this;
 	}
 
@@ -79,8 +78,12 @@ public:
 			return;
 		}
 		
-		std::size_t actual_length = (length == 0) ? calculated_length : std::min(length, calculated_length);
-		std::size_t padding = (length > actual_length) ? length - actual_length : 0;
+		std::size_t actual_length = (length == 0)
+			? calculated_length
+			: std::min(length, calculated_length);
+		std::size_t padding = (length > actual_length)
+			? length - actual_length
+			: 0;
 
 		if (pos + actual_length + padding > storage.size()) {
 			storage.resize(pos + actual_length + padding);
@@ -130,72 +133,31 @@ public:
 
 /*~ Storage */
 
-	[[nodiscard]] std::size_t get_size() const
-	{
-		return storage.size();
-	}
+	[[nodiscard]] std::size_t get_size() const;
 
-	[[nodiscard]] std::vector<std::byte> get_storage() const
-	{
-		return storage;
-	}
+	[[nodiscard]] std::vector<std::byte> get_storage() const;
 
-	[[nodiscard]] const std::byte* get_data() const
-	{
-		return storage.data();
-	}
+	[[nodiscard]] const std::byte* get_data() const;
 
-	[[nodiscard]] bool is_empty() const
-	{
-		return storage.empty();
-	}
+	[[nodiscard]] bool is_empty() const;
 
 /*~ Positioning */
 
-	[[nodiscard]] std::streampos get_pos() const
-	{
-		return pos;
-	}
+	[[nodiscard]] std::streampos get_pos() const;
 
-	void set_pos(std::streampos _pos)
-	{
-		pos = _pos;
-	}
+	void set_pos(std::streampos _pos);
 
-	void change_pos(std::streamoff offset)
-	{
-		pos += offset;
-	}
+	void change_pos(std::streamoff offset);
 
-	void go_to_end()
-	{
-		pos = storage.size();
-	}
+	void go_to_end();
 
-	void align_by(std::streamoff bytes)
-	{
-		const std::size_t remainder = pos % bytes;
-		if (remainder != 0) {
-			pos += bytes - remainder;
-		}
-	}
+	void align_by(std::streamoff bytes);
 
-	void reserve(std::size_t size)
-	{
-		storage.reserve(size);
-	}
+	void reserve(std::size_t size);
 
 /*~ Reading */
 	[[nodiscard]] constexpr auto operator[](std::size_t pos) const noexcept
-	-> std::expected<std::byte, BinaryError>
-	{
-		if (pos > storage.size()) {
-			return std::unexpected{
-				BinaryError::OutOfBounds{pos, storage.size()}
-			};
-		}
-		return storage[pos];
-	}
+		-> std::expected<std::byte, BinaryError>;
 
 private:
 	static constexpr std::size_t size_max = std::numeric_limits<std::size_t>::max();
