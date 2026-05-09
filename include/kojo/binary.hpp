@@ -69,45 +69,14 @@ public:
 
 	/* --- */
 
-	template <std::same_as<std::string_view> T>
-	void write(T value, const std::size_t length = 0)
-	{
-		const size_t calculated_length = value.size();
+	void write(std::string_view value, const std::size_t length = 0);
 
-		if (calculated_length == 0) {
-			return;
-		}
-		
-		std::size_t actual_length = (length == 0)
-			? calculated_length
-			: std::min(length, calculated_length);
-		std::size_t padding = (length > actual_length)
-			? length - actual_length
-			: 0;
-
-		if (pos + actual_length + padding > storage.size()) {
-			storage.resize(pos + actual_length + padding);
-		}
-		std::memcpy(storage.data() + pos, value.data(), actual_length);
-		std::memset(storage.data() + pos + actual_length, '\0', padding);
-		pos += actual_length + padding;
-	}
-
-	template <std::same_as<std::byte> T>
-	void write(const T value)
-	{
-		constexpr std::streamoff value_size = sizeof(std::byte);
-		if (pos + value_size > storage.size()) {
-			storage.resize(pos + value_size);
-		}
-		std::memcpy(storage.data() + pos, &value, value_size);
-		pos += value_size;
-	}
+	void write(const std::byte value);
 
 	template<std::integral T>
 	void write(T value, const std::endian endianness)
 	{
-		constexpr std::streamoff value_size = sizeof(T);
+		constexpr std::size_t value_size = sizeof(T);
 		if (pos + value_size > storage.size()) {
 			storage.resize(pos + value_size);
 		}
@@ -117,11 +86,7 @@ public:
 		pos += value_size;
 	}
 
-	void dump_file(const std::filesystem::path& output_path) const
-	{
-		std::ofstream file_output{output_path, std::ios::binary};
-		file_output.write(reinterpret_cast<const char*>(storage.data()), storage.size());
-	}
+	void dump_file(const std::filesystem::path& output_path) const;
 
 	template <std::integral T>
 	[[nodiscard]] static constexpr T set_endian(const T value, const std::endian endianness) noexcept
@@ -131,7 +96,7 @@ public:
 			: value;
 	}
 
-/*~ Storage */
+	/* --- */
 
 	[[nodiscard]] std::size_t get_size() const;
 
@@ -141,7 +106,7 @@ public:
 
 	[[nodiscard]] bool is_empty() const;
 
-/*~ Positioning */
+	/* --- */
 
 	[[nodiscard]] std::streampos get_pos() const;
 
@@ -155,7 +120,8 @@ public:
 
 	void reserve(std::size_t size);
 
-/*~ Reading */
+	/* --- */
+
 	[[nodiscard]] constexpr auto operator[](std::size_t pos) const noexcept
 		-> std::expected<std::byte, BinaryError>;
 
@@ -163,7 +129,7 @@ private:
 	static constexpr std::size_t size_max = std::numeric_limits<std::size_t>::max();
 
 	std::vector<std::byte> storage{};
-	std::streampos pos{0};
+	std::size_t pos{0};
 };
 
 /* This class does not own memory, similar to std::string_view. */

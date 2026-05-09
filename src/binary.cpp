@@ -64,6 +64,45 @@ auto Binary::from(std::span<const std::byte> span)
 	return result;
 }
 
+void Binary::write(std::string_view value, const std::size_t length)
+{
+	const std::size_t calculated_length = value.size();
+
+	if (calculated_length == 0) {
+		return;
+	}
+	
+	std::size_t actual_length = (length == 0)
+		? calculated_length
+		: std::min(length, calculated_length);
+	std::size_t padding = (length > actual_length)
+		? length - actual_length
+		: 0;
+
+	if (pos + actual_length + padding > storage.size()) {
+		storage.resize(pos + actual_length + padding);
+	}
+	std::memcpy(storage.data() + pos, value.data(), actual_length);
+	std::memset(storage.data() + pos + actual_length, '\0', padding);
+	pos += actual_length + padding;
+}
+
+void Binary::write(const std::byte value)
+{
+	constexpr std::streamoff value_size = sizeof(std::byte);
+	if (pos + value_size > storage.size()) {
+		storage.resize(pos + value_size);
+	}
+	std::memcpy(storage.data() + pos, &value, value_size);
+	pos += value_size;
+}
+
+void Binary::dump_file(const std::filesystem::path& output_path) const
+{
+	std::ofstream file_output{output_path, std::ios::binary};
+	file_output.write(reinterpret_cast<const char*>(storage.data()), storage.size());
+}
+
 std::size_t Binary::get_size() const
 {
 	return storage.size();
