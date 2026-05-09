@@ -135,7 +135,6 @@ private:
 /* This class does not own memory, similar to std::string_view. */
 class BinaryView {
 public:
-/*~ Constructors */
 	BinaryView() = default;
 
 	BinaryView(const BinaryView& other) = default;
@@ -169,18 +168,10 @@ public:
 
 	void load(const std::byte* src, const std::streampos start = 0, const std::size_t size = size_max);
 
-/*~ Reading */
+	/* --- */
 
 	[[nodiscard]] constexpr auto operator[](std::size_t pos) const noexcept
-		-> std::expected<std::byte, BinaryError>
-	{
-		if (exceeded_size(pos)) {
-			return std::unexpected{
-				BinaryError::OutOfBounds{address + pos, end}
-			};
-		}
-		return address[pos];
-	}
+		-> std::expected<std::byte, BinaryError>;
 
 	template <std::integral T>
 	[[nodiscard]] auto peek_at(const std::endian endianness, const std::streamoff target_pos) const
@@ -346,54 +337,24 @@ public:
 		return result;
 	}
 
-/*~ Data */
+	/* --- */
 
-	[[nodiscard]] constexpr const std::byte* data() const noexcept
-	{
-		return address;
-	}
+	[[nodiscard]] constexpr const std::byte* data() const noexcept;
 
-	[[nodiscard]] constexpr bool is_empty() const noexcept
-	{
-		return address == nullptr;
-	}
+	[[nodiscard]] constexpr bool is_empty() const noexcept;
 
-/*~ Positioning*/
+	/* --- */
 
-	[[nodiscard]] std::size_t get_pos() const
-	{
-		return pos;
-	}
+	[[nodiscard]] std::size_t get_pos() const;
 
-	void set_pos(std::streampos new_pos)
-	{
-		pos = new_pos;
-	}
+	void set_pos(std::streampos new_pos);
 
-	void change_pos(std::streamoff offset)
-	{
-		pos += offset;
-	}
+	void change_pos(std::streamoff offset);
 
-	void align_by(std::streamoff bytes)
-	{
-		const std::size_t remainder = pos % bytes;
-		if (remainder) {
-			pos += bytes - remainder;
-		}
-	}
+	void align_by(std::streamoff bytes);
 
 private:
-	[[nodiscard]] bool exceeded_size(const std::streampos target_pos) const
-	{
-		if (!address) {
-			return true;
-		}
-		if (!end) {
-			return false;
-		}
-		return address + target_pos > end;
-	}
+	[[nodiscard]] bool exceeded_size(const std::streampos target_pos) const;
 
 	static constexpr std::size_t size_max = std::numeric_limits<std::size_t>::max();
 
