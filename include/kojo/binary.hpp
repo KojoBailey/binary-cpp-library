@@ -73,7 +73,7 @@ public:
 	void write(const std::byte value);
 
 	template<std::integral T>
-	void write_internal(T value, const std::endian endianness)
+	void write(T value, const std::endian endianness)
 	{
 		constexpr std::size_t value_size = sizeof(T);
 		if (pos + value_size > storage.size()) {
