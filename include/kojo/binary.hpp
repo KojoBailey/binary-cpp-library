@@ -190,87 +190,14 @@ public:
 	-> std::expected<std::byte, BinaryError>
 	{
 		if (pos > storage.size()) {
-			return std::unexpected{ BinaryError::OutOfBounds{} };
+			return std::unexpected{
+				BinaryError::OutOfBounds{pos, storage.size()}
+			};
 		}
 		return storage[pos];
 	}
 
 private:
-	auto load_file_path(
-		const std::filesystem::path& file_path,
-		std::size_t size = size_max,
-		const std::streamoff start_pos = 0
-	) -> std::expected<Binary, BinaryError>
-	{
-		if (!std::filesystem::exists(file_path)) {
-			return std::unexpected{ BinaryError::FileNotFound{} };
-		}
-
-		if (!std::filesystem::is_regular_file(file_path)) {
-			return std::unexpected{ BinaryError::InvalidFile{} };
-		}
-		
-		std::ifstream file{file_path, std::ios::binary};
-		if (!file.is_open()) {
-			return std::unexpected{ BinaryError::FileNotOpen{} };
-		}
-
-		storage.clear();
-		pos = 0;
-
-		if (size == 0) {
-			return {};
-		}
-
-		if (size == size_max) {
-			file.seekg(0, std::ios::end);
-			size = file.tellg() - start_pos;
-		}
-		file.seekg(start_pos);
-
-		try {
-			storage.resize(size);
-		}
-		catch (const std::bad_alloc&) {
-			return std::unexpected{ BinaryError::InsufficientMemory{} };
-		}
-		file.read(reinterpret_cast<char*>(storage.data()), size);
-
-		const std::streamsize actual_file_size  = file.gcount();
-		if (actual_file_size != size) {
-			storage.resize(actual_file_size);
-		}
-
-		return {};
-	}
-
-	auto load_byte_stream(	
-		const std::byte* byte_stream,
-		const std::size_t size,
-		const std::streamoff start_pos = 0
-	) -> std::expected<Binary, BinaryError>
-	{
-		if (!byte_stream) {
-			return std::unexpected{ BinaryError::NullPointer{} };
-		}
-
-		storage.clear();
-		pos = 0;
-
-		if (size == 0) {
-			return {};
-		}
-
-		try {
-			storage.resize(size);
-		} catch (const std::bad_alloc&) {
-			return std::unexpected{ BinaryError::InsufficientMemory{} };
-		}
-		std::memcpy(storage.data(), byte_stream + start_pos, size);
-
-		return {};
-	}
-
 	static constexpr std::size_t size_max = std::numeric_limits<std::size_t>::max();
 
 	std::vector<std::byte> storage{};
@@ -278,41 +205,41 @@ private:
 };
 
 /* This class does not own memory, similar to std::string_view. */
-class binary_view {
+class BinaryView {
 public:
 /*~ Constructors */
-	binary_view() = default;
+	BinaryView() = default;
 
-	binary_view(const binary_view& other) = default;
+	BinaryView(const BinaryView& other) = default;
 
-	binary_view& operator=(const binary_view& other) = default;
+	BinaryView& operator=(const BinaryView& other) = default;
 	
-	~binary_view() = default;
+	~BinaryView() = default;
 
-	binary_view(binary_view&& other) noexcept :
-		m_address(other.m_address),
+	BinaryView(BinaryView&& other) noexcept :
+		address(other.address),
 		pos(other.pos) {}
 
-	binary_view& operator=(binary_view&& other) noexcept
+	BinaryView& operator=(BinaryView&& other) noexcept
 	{
 		if (this != &other) {
-		m_address = other.m_address;
+		address = other.address;
 		pos = other.pos;
 		}
 		return *this;
 	}
 
-	binary_view(const std::byte* src, const std::streampos start = 0)
+	BinaryView(const std::byte* src, const std::streampos start = 0)
 	{
 		load(src, start);
 	}
 
-	binary_view(std::span<const std::byte> data, std::streampos start = 0)
+	BinaryView(std::span<const std::byte> data, std::streampos start = 0)
 	{
 		load(data, start);
 	}
 
-	binary_view(const Binary& binary, const std::streampos start = 0)
+	BinaryView(const Binary& binary, const std::streampos start = 0)
 	{
 		load(binary, start);
 	}
@@ -329,25 +256,25 @@ public:
 
 	void load(const std::byte* src, const std::streampos start = 0, const std::size_t size = size_max)
 	{
-		m_address = &src[start];
+		address = &src[start];
 		if (size != size_max) {
-			m_end = m_address + size;
+			end = address + size;
 		}
 		pos = 0;
 	}
 
 	void load(std::span<const std::byte> data, std::streampos start = 0)
 	{
-		m_address = data.data() + start;
-		m_end = m_address + data.size();
+		address = data.data() + start;
+		end = address + data.size();
 		pos = 0;
 	}
 
 	void load(const Binary& binary, const std::streampos start = 0, const std::size_t size = size_max)
 	{
-		m_address = &binary.get_data()[start];
+		address = &binary.get_data()[start];
 		if (size == size_max) {
-			m_end = m_address + binary.get_size();
+			end = address + binary.get_size();
 		}
 		pos = 0;
 	}
@@ -360,7 +287,7 @@ public:
 		if (exceeded_size(pos)) {
 			return std::unexpected{error::out_of_bounds};
 		}
-		return m_address[pos];
+		return address[pos];
 	}
 
 	template <std::integral T>
@@ -372,7 +299,7 @@ public:
 		}
 
 		T result;
-		std::memcpy(&result, &m_address[target_pos], sizeof(T));
+		std::memcpy(&result, &address[target_pos], sizeof(T));
 		result = Binary::set_endian(result, endianness);
 		return result;
 	}
@@ -385,7 +312,7 @@ public:
 			return std::unexpected{error::out_of_bounds};
 		}
 
-		std::byte result = m_address[target_pos];
+		std::byte result = address[target_pos];
 		return result;
 	}
 
@@ -398,7 +325,7 @@ public:
 			return std::unexpected{error::out_of_bounds};
 		}
 
-		std::string result = reinterpret_cast<const char*>(&m_address[target_pos]);
+		std::string result = reinterpret_cast<const char*>(&address[target_pos]);
 		result = result.substr(0, size);
 		return result;
 	}
@@ -412,7 +339,7 @@ public:
 			return std::unexpected{error::out_of_bounds};
 		}
 
-		std::string_view result = reinterpret_cast<const char*>(&m_address[target_pos]);
+		std::string_view result = reinterpret_cast<const char*>(&address[target_pos]);
 		return result;
 	}
 
@@ -425,7 +352,7 @@ public:
 		}
 
 		T result;
-		std::memcpy(&result, &m_address[target_pos], sizeof(T));
+		std::memcpy(&result, &address[target_pos], sizeof(T));
 		return result;
 	}
 
@@ -521,12 +448,12 @@ public:
 
 	[[nodiscard]] constexpr const std::byte* data() const noexcept
 	{
-		return m_address;
+		return address;
 	}
 
 	[[nodiscard]] constexpr bool is_empty() const noexcept
 	{
-		return m_address == nullptr;
+		return address == nullptr;
 	}
 
 /*~ Positioning*/
@@ -557,19 +484,19 @@ public:
 private:
 	[[nodiscard]] bool exceeded_size(const std::streampos target_pos) const
 	{
-		if (!!m_address) {
+		if (!address) {
 			return true;
 		}
-		if (!m_end) {
+		if (!end) {
 			return false;
 		}
-		return m_address + target_pos > m_end;
+		return address + target_pos > end;
 	}
 
 	static constexpr std::size_t size_max = std::numeric_limits<std::size_t>::max();
 
-	const std::byte* m_address{nullptr};
-	const std::byte* m_end{nullptr};
+	const std::byte* address{nullptr};
+	const std::byte* end{nullptr};
 	std::streampos pos{0};
 };
 

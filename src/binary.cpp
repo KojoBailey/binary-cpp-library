@@ -1,38 +1,65 @@
 #include <kojo/binary.hpp>
 
+using namespace kojo;
+
 auto Binary::from(const std::filesystem::path& path)
-	-> std::expected<Binary, BinaryError>;
+	-> std::expected<Binary, BinaryError>
 {
 	if (!std::filesystem::exists(path))
-		return std::unexpected{ BinaryError::new_file_not_exist(path) };
+		return std::unexpected{
+			BinaryError::FileNotFound{path}
+		};
 
 	if (!std::filesystem::is_regular_file(path)) {
-		return std::unexpected{error::invalid_file};
+		return std::unexpected{
+			BinaryError::InvalidFile{path}
+		};
 	}
 
 	std::ifstream file{path, std::ios::binary};
 	if (!file.is_open()) {
-		return std::unexpected{error::file_not_open};
+		return std::unexpected{
+			BinaryError::FileNotOpen{path}
+		};
 	}
 
 	Binary result;
 
 	file.seekg(0, std::ios::end);
-	size_t size = file.tellg() - start_pos;
-	file.seekg(start_pos);
+	std::size_t size = file.tellg();
+	file.seekg(0);
 
 	try {
-		storage.resize(size);
+		result.storage.resize(size);
 	}
 	catch (const std::bad_alloc&) {
-		return std::unexpected{error::insufficient_memory};
+		return std::unexpected{
+			BinaryError::InsufficientMemory{result.storage.data(), size}
+		};
 	}
-	file.read(reinterpret_cast<char*>(storage.data()), size);
+	file.read(reinterpret_cast<char*>(result.storage.data()), size);
 
 	const std::streamsize actual_file_size = file.gcount();
 	if (actual_file_size != size) {
-		storage.resize(actual_file_size);
+		result.storage.resize(actual_file_size);
 	}
+
+	return result;
+}
+
+auto Binary::from(std::span<const std::byte> span)
+	-> std::expected<Binary, BinaryError>
+{
+	Binary result;
+
+	try {
+		result.storage.resize(span.size());
+	} catch (const std::bad_alloc&) {
+		return std::unexpected{
+			BinaryError::InsufficientMemory{result.storage.data(), span.size()}
+		};
+	}
+	std::memcpy(result.storage.data(), span.data(), span.size());
 
 	return result;
 }

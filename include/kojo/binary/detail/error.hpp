@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <format>
 #include <string>
 #include <variant>
 
@@ -15,59 +16,86 @@ struct BinaryError {
 	struct NullPointer {
 		static const std::uint32_t code = 0;
 
-		static std::string to_string() {
-			return "Pointer argument is null and cannot be used.";
+		std::string to_string() const {
+			return "Pointer is null.";
 		}
 	};
 
 	struct InsufficientMemory {
 		static const std::uint32_t code = 1;
 
-		static std::string to_string() {
-			return "Ran out of memory while trying to resize.";
+		std::string to_string() const {
+			return std::format("Ran out of memory at {:08x} with requested size {}.",
+				reinterpret_cast<std::size_t>(address), size);
 		}
+
+		InsufficientMemory() = delete;
+		InsufficientMemory(const std::byte* _address, const std::size_t _size)
+			: address(_address), size(_size) {}
+
+		const std::byte* address;
+		const std::size_t size;
 	};
 
 	struct OutOfBounds {
 		static const std::uint32_t code = 2;
 
-		static std::string to_string() {
-			return "Tried to access data outside of the object.";
+		std::string to_string() const {
+			return std::format("Tried to access data at position {}, but data is only {} bytes.",
+				position, size
+			);
 		}
+
+		OutOfBounds() = delete;
+		OutOfBounds(const std::size_t _position, const std::size_t _size)
+			: position(_position), size(_size) {}
+
+		const std::size_t position;
+		const std::size_t size;
 	};
 
 	struct FileNotFound {
 		static const std::uint32_t code = 100;
 
-		static std::string to_string() {
-			return "File could not be found at specified path.";
+		std::string to_string() const {
+			return std::format("File at \"{}\" could not be found.", path.string());
 		}
 
-		std::filesystem::path path;
+		FileNotFound() = delete;
+		FileNotFound(const std::filesystem::path _path)
+			: path(_path) {}
+
+		const std::filesystem::path path;
 	};
 
 	struct InvalidFile {
 		static const std::uint32_t code = 101;
 
-		static std::string to_string() {
-			return "Specified path does not lead to a regular file.";
+		std::string to_string() const {
+			return std::format("File at \"{}\" is not a valid file. It may be a directory instead",
+				path.string()
+			);
 		}
+
+		InvalidFile() = delete;
+		InvalidFile(const std::filesystem::path _path)
+			: path(_path) {}
+
+		const std::filesystem::path path;
 	};
 
 	struct FileNotOpen {
 		static const std::uint32_t code = 102;
 
-		static std::string to_string() {
-			return "Attempting to open the specified file failed.";
+		std::string to_string() const {
+			return std::format("Could not open file at \"{}\".", path.string());
 		}
-	};
 
-	struct InvalidFileSize {
-		static const std::uint32_t code = 103;
+		FileNotOpen() = delete;
+		FileNotOpen(const std::filesystem::path _path)
+			: path(_path) {}
 
-		static std::string to_string() {
-			return "The specified size was invalid for whatever reason.";
-		}
+		const std::filesystem::path path;
 	};
 
 	std::variant<
@@ -76,8 +104,7 @@ struct BinaryError {
 		OutOfBounds,
 		FileNotFound,
 		InvalidFile,
-		FileNotOpen,
-		InvalidFileSize
+		FileNotOpen
 	> variant{};
 
 	std::uint32_t to_code() const {
