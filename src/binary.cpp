@@ -31,8 +31,7 @@ auto Binary::from(const std::filesystem::path& path)
 
 	try {
 		result.storage.resize(size);
-	}
-	catch (const std::bad_alloc&) {
+	} catch (const std::exception&) {
 		return std::unexpected{
 			BinaryError::InsufficientMemory{result.storage.data(), size}
 		};
@@ -64,12 +63,13 @@ auto Binary::from(std::span<const std::byte> span)
 	return result;
 }
 
-void Binary::write(std::string_view value, const std::size_t length)
+auto Binary::write(std::string_view value, const std::size_t length)
+	-> std::expected<void, BinaryError>
 {
 	const std::size_t calculated_length = value.size();
 
 	if (calculated_length == 0) {
-		return;
+		return {};
 	}
 	
 	std::size_t actual_length = (length == 0)
@@ -80,27 +80,49 @@ void Binary::write(std::string_view value, const std::size_t length)
 		: 0;
 
 	if (pos + actual_length + padding > storage.size()) {
-		storage.resize(pos + actual_length + padding);
+		try {
+			storage.resize(pos + actual_length + padding);
+		} catch (const std::exception&) {
+			return std::unexpected{
+				BinaryError::InsufficientMemory{storage.data(), storage.size()}
+			};
+		}
 	}
 	std::memcpy(storage.data() + pos, value.data(), actual_length);
 	std::memset(storage.data() + pos + actual_length, '\0', padding);
 	pos += actual_length + padding;
+	return {};
 }
 
-void Binary::write(const std::byte value)
+auto Binary::write(const std::byte value)
+	-> std::expected<void, BinaryError>
 {
 	constexpr std::streamoff value_size = sizeof(std::byte);
 	if (pos + value_size > storage.size()) {
-		storage.resize(pos + value_size);
+		try {
+			storage.resize(pos + value_size);
+		} catch (const std::exception&) {
+			return std::unexpected{
+				BinaryError::InsufficientMemory{storage.data(), value_size}
+			};
+		}
 	}
 	std::memcpy(storage.data() + pos, &value, value_size);
 	pos += value_size;
+	return {};
 }
 
-void Binary::dump_file(const std::filesystem::path& output_path) const
+auto Binary::dump_file(const std::filesystem::path& output_path) const
+	-> std::expected<void, BinaryError>
 {
-	std::ofstream file_output{output_path, std::ios::binary};
-	file_output.write(reinterpret_cast<const char*>(storage.data()), storage.size());
+	std::ofstream output_file{output_path, std::ios::binary};
+	if (!output_file.is_open()) {
+		return std::unexpected{
+			BinaryError::FileNotOpen{output_path}
+		};
+	}
+	output_file.write(reinterpret_cast<const char*>(storage.data()), storage.size());
+	return {};
 }
 
 std::size_t Binary::get_size() const
@@ -151,12 +173,19 @@ void Binary::align_by(std::streamoff bytes)
 	}
 }
 
-void Binary::reserve(std::size_t size)
+auto Binary::reserve(std::size_t size)
+	-> std::expected<void, BinaryError>
 {
-	storage.reserve(size);
+	try {
+		storage.reserve(size);
+	} catch (const std::bad_alloc&) {
+		return std::unexpected{
+			BinaryError::InsufficientMemory{storage.data(), size}
+		};
+	}
+	return {};
 }
 
-/*~ Reading */
 constexpr auto Binary::operator[](std::size_t pos) const noexcept
 	-> std::expected<std::byte, BinaryError>
 {

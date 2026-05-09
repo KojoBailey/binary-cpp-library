@@ -61,16 +61,16 @@ struct BinaryError {
 			return std::format(
 				"Tried to access data at address {:08x}, but data ends at address {:08}.",
 				reinterpret_cast<std::size_t>(access_address),
-				reinterpret_cast<std::size_t>(data_end)
+				reinterpret_cast<std::size_t>(end_address)
 			);
 		}
 
 		OutOfBounds() = delete;
-		OutOfBounds(const std::byte* _access_address, const std::byte* _data_end)
-			: access_address(_access_address), data_end(_data_end) {}
+		OutOfBounds(const std::byte* _access_address, const std::byte* _end_address)
+			: access_address(_access_address), end_address(_end_address) {}
 
 		const std::byte* access_address;
-		const std::byte* data_end;
+		const std::byte* end_address;
 	};
 
 	struct FileNotFound {

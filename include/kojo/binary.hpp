@@ -68,24 +68,35 @@ public:
 
 	/* --- */
 
-	void write(std::string_view value, const std::size_t length = 0);
+	auto write(std::string_view value, const std::size_t length = 0)
+		-> std::expected<void, BinaryError>;
 
-	void write(const std::byte value);
+	auto write(const std::byte value)
+		-> std::expected<void, BinaryError>;
 
 	template<std::integral T>
-	void write(T value, const std::endian endianness)
+	auto write(T value, const std::endian endianness)
+		-> std::expected<void, BinaryError>
 	{
 		constexpr std::size_t value_size = sizeof(T);
 		if (pos + value_size > storage.size()) {
-			storage.resize(pos + value_size);
+			try {
+				storage.resize(pos + value_size);
+			} catch (const std::exception&) {
+				return std::unexpected{
+					BinaryError::InsufficientMemory{storage.data(), storage.size()}
+				};
+			}
 		}
 
 		value = set_endian(value, endianness);
 		std::memcpy(storage.data() + pos, &value, value_size);
 		pos += value_size;
+		return {};
 	}
 
-	void dump_file(const std::filesystem::path& output_path) const;
+	auto dump_file(const std::filesystem::path& output_path) const
+		-> std::expected<void, BinaryError>;
 
 	template <std::integral T>
 	[[nodiscard]] static constexpr T set_endian(const T value, const std::endian endianness) noexcept
@@ -117,7 +128,8 @@ public:
 
 	void align_by(std::streamoff bytes);
 
-	void reserve(std::size_t size);
+	auto reserve(std::size_t size)
+		-> std::expected<void, BinaryError>;
 
 	/* --- */
 
@@ -212,7 +224,7 @@ public:
 			};
 		}
 
-		std::string result = reinterpret_cast<const char*>(&address[target_pos]);
+		std::string result{reinterpret_cast<const char*>(&address[target_pos])};
 		result = result.substr(0, size);
 		return result;
 	}
