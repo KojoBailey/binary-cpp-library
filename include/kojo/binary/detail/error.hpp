@@ -13,9 +13,6 @@ struct overloaded : Ts... { using Ts::operator()...; };
 namespace kojo {
 
 struct BinaryError {
-	template<typename T>
-	BinaryError(T&& err) : variant(std::forward<T>(err)) {}
-
 	struct NullPointer {
 		static const std::uint32_t code = 0;
 
@@ -129,6 +126,10 @@ struct BinaryError {
 		InvalidFile,
 		FileNotOpen
 	> variant{};
+
+	template<typename T>
+		requires std::constructible_from<decltype(variant), T>
+	BinaryError(T&& err) : variant(std::forward<T>(err)) {}
 
 	std::uint32_t to_code() const {
 		return std::visit([](const auto& err) { return err.code; }, variant);
