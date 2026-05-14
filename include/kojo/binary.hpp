@@ -183,6 +183,21 @@ public:
 	[[nodiscard]] constexpr auto operator[](std::size_t pos) const noexcept
 		-> std::expected<std::byte, BinaryError>;
 
+	template <std::same_as<bool> T>
+	[[nodiscard]] auto peek_at(const std::size_t size, const std::streamoff target_pos) const
+		-> std::expected<T, BinaryError>
+	{
+		if (exceeded_size(target_pos + size - 1)) {
+			return std::unexpected{
+				BinaryError::OutOfBounds{address + pos, end}
+			};
+		}
+
+		T result;
+		std::memcpy(&result, &address[target_pos], size);
+		return result;
+	}
+
 	template <std::integral T>
 	[[nodiscard]] auto peek_at(const std::endian endianness, const std::streamoff target_pos) const
 		-> std::expected<T, BinaryError>
@@ -259,6 +274,13 @@ public:
 		return result;
 	}
 
+	template<std::same_as<bool> T>
+	[[nodiscard]] auto peek(const std::size_t size, const std::streamoff offset = 0) const
+		-> std::expected<T, BinaryError>
+	{
+		return peek_at<T>(size, pos + offset);
+	}
+
 	template<std::integral T>
 	[[nodiscard]] auto peek(const std::endian endianness, const std::streamoff offset = 0) const
 		-> std::expected<T, BinaryError>
@@ -294,6 +316,15 @@ public:
 		-> std::expected<T, BinaryError>
 	{
 		return peek_struct_at<T>(pos + offset);
+	}
+
+	template<std::integral T>
+	[[nodiscard]] auto read(const std::size_t size)
+		-> std::expected<T, BinaryError>
+	{
+		const auto result = peek<T>(size);
+		pos += size;
+		return result;
 	}
 
 	template<std::integral T>
