@@ -14,6 +14,8 @@ It aims to:
     - Proper imperative method names, like `.get_size()` instead of `.size()`.
     - Questions for boolean members and methods, like `.is_empty()` instead of `.empty()`.
 
+Unfortunately, due to slow implementation of the `stdfloat` types, this may not work across all compilers, but I have tested it for GCC 16.1.1 and Clang 22.1.5.
+
 ## Table of Contents
 - [Dependencies](#dependencies)
 - [Usage](#usage)

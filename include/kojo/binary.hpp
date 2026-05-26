@@ -25,11 +25,35 @@ namespace type_abbreviations {
 	using i32 = std::int32_t;
 	using i64 = std::int64_t;
 	
+#if defined(__STDCPP_FLOAT16_T__)
 	using f16  = std::float16_t;
+#elif defined(_Float16)
+	using f16  = _Float16;
+#endif
+
+#if defined(__STDCPP_BFLOAT16_T__)
 	using bf16 = std::bfloat16_t;
+#elif defined(__bf16)
+	using bf16 = __bf16;
+#endif
+
+#if defined(__STDCPP_FLOAT32_T__)
 	using f32  = std::float32_t;
+#else
+	using f32  = float;
+#endif
+
+#if defined(__STDCPP_FLOAT64_T__)
 	using f64  = std::float64_t;
+#else
+	using f64  = double;
+#endif
+
+#if defined(__STDCPP_FLOAT128_T__)
 	using f128 = std::float128_t;
+#elif defined(__SIZEOF_FLOAT128__)
+	using f128 = __float128;
+#endif
 
 	using str = std::string;
 	using sv = std::string_view;
