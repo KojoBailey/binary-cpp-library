@@ -397,7 +397,7 @@ public:
 	[[nodiscard]] auto read_struct()
 		-> std::expected<T, BinaryError>
 	{
-		const auto result = peek<T>();
+		const auto result = peek_struct<T>();
 		pos += sizeof(T);
 		return result;
 	}
