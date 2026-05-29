@@ -2,7 +2,7 @@
 
 using namespace kojo;
 
-auto Binary::from(const std::filesystem::path& path)
+auto Binary::from(const std::filesystem::path& path) noexcept
 	-> std::expected<Binary, BinaryError>
 {
 	if (!std::filesystem::exists(path))
@@ -46,7 +46,7 @@ auto Binary::from(const std::filesystem::path& path)
 	return result;
 }
 
-auto Binary::from(std::span<const std::byte> span)
+auto Binary::from(std::span<const std::byte> span) noexcept
 	-> std::expected<Binary, BinaryError>
 {
 	Binary result;
@@ -59,6 +59,23 @@ auto Binary::from(std::span<const std::byte> span)
 		};
 	}
 	std::memcpy(result.storage.data(), span.data(), span.size());
+
+	return result;
+}
+
+auto Binary::from(const BinaryView bv, const std::size_t size, const std::size_t start) noexcept
+	-> std::expected<Binary, BinaryError>
+{
+	Binary result;
+
+	try {
+		result.storage.resize(size);
+	} catch (const std::bad_alloc&) {
+		return std::unexpected{
+			BinaryError::InsufficientMemory{result.storage.data(), size}
+		};
+	}
+	std::memcpy(result.storage.data(), bv.get_data() + start, size);
 
 	return result;
 }

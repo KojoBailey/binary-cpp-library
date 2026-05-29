@@ -59,6 +59,8 @@ namespace type_abbreviations {
 	using sv = std::string_view;
 }
 
+class BinaryView;
+
 class Binary {
 public:
 	Binary() = default;
@@ -84,10 +86,13 @@ public:
 
 	/* --- */
 
-	[[nodiscard]] static auto from(const std::filesystem::path& file_path)
+	[[nodiscard]] static auto from(const std::filesystem::path& file_path) noexcept
 		-> std::expected<Binary, BinaryError>;
 
-	[[nodiscard]] static auto from(std::span<const std::byte> span)
+	[[nodiscard]] static auto from(std::span<const std::byte> span) noexcept
+		-> std::expected<Binary, BinaryError>;
+
+	[[nodiscard]] static auto from(const BinaryView bv, const std::size_t size, const std::size_t start = 0) noexcept
 		-> std::expected<Binary, BinaryError>;
 
 	/* --- */
@@ -404,7 +409,7 @@ public:
 
 	/* --- */
 
-	[[nodiscard]] constexpr const std::byte* data() const noexcept;
+	[[nodiscard]] constexpr const std::byte* get_data() const noexcept;
 
 	[[nodiscard]] constexpr bool is_empty() const noexcept;
 
