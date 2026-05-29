@@ -409,7 +409,7 @@ public:
 
 	/* --- */
 
-	[[nodiscard]] constexpr const std::byte* get_data() const noexcept;
+	[[nodiscard]] constexpr const std::byte* get_data() const noexcept { return address; }
 
 	[[nodiscard]] constexpr bool is_empty() const noexcept;
 

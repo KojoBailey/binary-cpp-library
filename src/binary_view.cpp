@@ -53,11 +53,6 @@ constexpr auto BinaryView::operator[](std::size_t pos) const noexcept
 	return address[pos];
 }
 
-constexpr const std::byte* BinaryView::get_data() const noexcept
-{
-	return address;
-}
-
 constexpr bool BinaryView::is_empty() const noexcept
 {
 	return address == nullptr;
