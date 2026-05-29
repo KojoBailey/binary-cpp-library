@@ -63,6 +63,11 @@ std::size_t BinaryView::get_pos() const
 	return pos;
 }
 
+bool BinaryView::is_at_end() const
+{
+	return exceeded_size(pos + 1); 
+}
+
 void BinaryView::set_pos(std::streampos new_pos)
 {
 	pos = new_pos;

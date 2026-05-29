@@ -417,6 +417,8 @@ public:
 
 	[[nodiscard]] std::size_t get_pos() const;
 
+	[[nodiscard]] bool is_at_end() const;
+
 	void set_pos(std::streampos new_pos);
 
 	void change_pos(std::streamoff offset);
