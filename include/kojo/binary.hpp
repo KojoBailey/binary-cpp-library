@@ -169,7 +169,7 @@ public:
 private:
 	static constexpr std::size_t size_max = std::numeric_limits<std::size_t>::max();
 
-	std::vector<std::byte> storage{};
+	std::vector<std::byte> storage;
 	std::size_t pos{0};
 };
 
