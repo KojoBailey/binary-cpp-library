@@ -142,27 +142,27 @@ auto Binary::dump_file(const std::filesystem::path& output_path) const
 	return {};
 }
 
-std::size_t Binary::get_size() const
+auto Binary::get_size() const -> std::size_t
 {
 	return storage.size();
 }
 
-std::vector<std::byte> Binary::get_storage() const
+auto Binary::get_storage() const -> std::vector<std::byte>
 {
 	return storage;
 }
 
-const std::byte* Binary::get_data() const
+auto Binary::get_data() const -> const std::byte*
 {
 	return storage.data();
 }
 
-bool Binary::is_empty() const
+auto Binary::is_empty() const -> bool
 {
 	return storage.empty();
 }
 
-std::streampos Binary::get_pos() const
+auto Binary::get_pos() const -> std::streampos
 {
 	return pos;
 }

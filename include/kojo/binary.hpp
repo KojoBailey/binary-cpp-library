@@ -67,13 +67,13 @@ public:
 
 	Binary(const Binary& other) = default;
 
-	Binary& operator=(const Binary& other) = default;
+	auto operator=(const Binary& other) -> Binary& = default;
 
 	Binary(Binary&& other) noexcept :
 		storage(std::move(other.storage)),
 		pos(other.pos) {}
 
-	Binary& operator=(Binary&& other) noexcept
+	auto operator=(Binary&& other) noexcept -> Binary&
 	{
 		if (this != &other) {
 			storage = std::move(other.storage);
@@ -128,7 +128,8 @@ public:
 		-> std::expected<void, BinaryError>;
 
 	template <std::integral T>
-	[[nodiscard]] static constexpr T set_endian(T value, std::endian endianness) noexcept
+	[[nodiscard]] static constexpr auto set_endian(T value, std::endian endianness) noexcept
+		-> T
 	{
 		return (std::endian::native != endianness)
 			? std::byteswap(value)
@@ -137,17 +138,17 @@ public:
 
 	/* --- */
 
-	[[nodiscard]] std::size_t get_size() const;
+	[[nodiscard]] auto get_size() const -> std::size_t;
 
-	[[nodiscard]] std::vector<std::byte> get_storage() const;
+	[[nodiscard]] auto get_storage() const -> std::vector<std::byte>;
 
-	[[nodiscard]] const std::byte* get_data() const;
+	[[nodiscard]] auto get_data() const -> const std::byte*;
 
-	[[nodiscard]] bool is_empty() const;
+	[[nodiscard]] auto is_empty() const -> bool;
 
 	/* --- */
 
-	[[nodiscard]] std::streampos get_pos() const;
+	[[nodiscard]] auto get_pos() const -> std::streampos;
 
 	void set_pos(std::streampos _pos);
 
@@ -179,14 +180,14 @@ public:
 
 	BinaryView(const BinaryView& other) = default;
 
-	BinaryView& operator=(const BinaryView& other) = default;
+	auto operator=(const BinaryView& other) -> BinaryView& = default;
 	
 	~BinaryView() = default;
 
 	BinaryView(BinaryView&& other) noexcept :
 		address(other.address), pos(other.pos) {}
 
-	BinaryView& operator=(BinaryView&& other) noexcept
+	auto operator=(BinaryView&& other) noexcept -> BinaryView&
 	{
 		if (this != &other) {
 			address = other.address;
@@ -409,15 +410,16 @@ public:
 
 	/* --- */
 
-	[[nodiscard]] constexpr const std::byte* get_data() const noexcept { return address; }
+	[[nodiscard]] constexpr auto get_data() const noexcept
+		-> const std::byte* { return address; }
 
-	[[nodiscard]] constexpr bool is_empty() const noexcept;
+	[[nodiscard]] constexpr auto is_empty() const noexcept -> bool;
 
 	/* --- */
 
-	[[nodiscard]] std::size_t get_pos() const;
+	[[nodiscard]] auto get_pos() const -> std::size_t;
 
-	[[nodiscard]] bool is_at_end() const;
+	[[nodiscard]] auto is_at_end() const -> bool;
 
 	void set_pos(std::streampos new_pos);
 
@@ -426,7 +428,7 @@ public:
 	void align_by(std::streamoff bytes);
 
 private:
-	[[nodiscard]] bool exceeded_size(std::streampos target_pos) const;
+	[[nodiscard]] auto exceeded_size(std::streampos target_pos) const -> bool;
 
 	static constexpr std::size_t size_max = std::numeric_limits<std::size_t>::max();
 

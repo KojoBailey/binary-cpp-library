@@ -53,17 +53,17 @@ constexpr auto BinaryView::operator[](std::size_t pos) const noexcept
 	return address[pos];
 }
 
-constexpr bool BinaryView::is_empty() const noexcept
+constexpr auto BinaryView::is_empty() const noexcept -> bool
 {
 	return address == nullptr;
 }
 
-std::size_t BinaryView::get_pos() const
+auto BinaryView::get_pos() const -> std::size_t
 {
 	return pos;
 }
 
-bool BinaryView::is_at_end() const
+auto BinaryView::is_at_end() const -> bool
 {
 	return exceeded_size(pos + 1); 
 }
@@ -86,7 +86,7 @@ void BinaryView::align_by(std::streamoff bytes)
 	}
 }
 
-bool BinaryView::exceeded_size(const std::streampos target_pos) const
+auto BinaryView::exceeded_size(const std::streampos target_pos) const -> bool
 {
 	if (!address) {
 		return true;

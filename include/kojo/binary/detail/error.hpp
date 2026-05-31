@@ -16,7 +16,7 @@ struct BinaryError {
 	struct NullPointer {
 		static const std::uint32_t code = 0;
 
-		std::string to_string() const {
+		auto to_string() const -> std::string {
 			return "Pointer is null.";
 		}
 	};
@@ -31,7 +31,7 @@ struct BinaryError {
 		InsufficientMemory(const std::byte* _address, const std::size_t _size)
 			: address(_address), size(_size) {}
 
-		std::string to_string() const {
+		auto to_string() const -> std::string {
 			return std::format("Ran out of memory at {:08x} with requested size {}.",
 				reinterpret_cast<std::size_t>(address), size);
 		}
@@ -47,7 +47,7 @@ struct BinaryError {
 		SizeExceeded(const std::size_t _position, const std::size_t _size)
 			: position(_position), size(_size) {}
 
-		std::string to_string() const {
+		auto to_string() const -> std::string {
 			return std::format("Tried to access data at position {}, but data is only {} bytes.",
 				position, size
 			);
@@ -64,7 +64,7 @@ struct BinaryError {
 		OutOfBounds(const std::byte* _access_address, const std::byte* _end_address)
 			: access_address(_access_address), end_address(_end_address) {}
 
-		std::string to_string() const {
+		auto to_string() const -> std::string {
 			return std::format(
 				"Tried to access data at address {:08x}, but data ends at address {:08}.",
 				reinterpret_cast<std::size_t>(access_address),
@@ -82,7 +82,7 @@ struct BinaryError {
 		FileNotFound(const std::filesystem::path _path)
 			: path(_path) {}
 
-		std::string to_string() const {
+		auto to_string() const -> std::string {
 			return std::format("File at \"{}\" could not be found.", path.string());
 		}
 	};
@@ -96,7 +96,7 @@ struct BinaryError {
 		InvalidFile(const std::filesystem::path _path)
 			: path(_path) {}
 
-		std::string to_string() const {
+		auto to_string() const -> std::string {
 			return std::format("File at \"{}\" is not a valid file. It may be a directory instead",
 				path.string()
 			);
@@ -112,7 +112,7 @@ struct BinaryError {
 		FileNotOpen(const std::filesystem::path _path)
 			: path(_path) {}
 
-		std::string to_string() const {
+		auto to_string() const -> std::string {
 			return std::format("Could not open file at \"{}\".", path.string());
 		}
 	};
@@ -131,12 +131,14 @@ struct BinaryError {
 		requires std::constructible_from<decltype(variant), T>
 	BinaryError(T&& err) : variant(std::forward<T>(err)) {}
 
-	std::uint32_t to_code() const {
-		return std::visit([](const auto& err) { return err.code; }, variant);
+	auto to_code() const -> std::uint32_t {
+		return std::visit([](const auto& err) -> auto
+			{ return err.code; }, variant);
 	}
 
-	std::string to_string() const {
-		return std::visit([](const auto& err) { return err.to_string(); }, variant);
+	auto to_string() const -> std::string {
+		return std::visit([](const auto& err) -> auto
+			{ return err.to_string(); }, variant);
 	}
 };
 
