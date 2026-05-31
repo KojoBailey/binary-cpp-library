@@ -92,19 +92,19 @@ public:
 	[[nodiscard]] static auto from(std::span<const std::byte> span) noexcept
 		-> std::expected<Binary, BinaryError>;
 
-	[[nodiscard]] static auto from(const BinaryView bv, const std::size_t size, const std::size_t start = 0) noexcept
+	[[nodiscard]] static auto from(BinaryView bv, std::size_t size, std::size_t start = 0) noexcept
 		-> std::expected<Binary, BinaryError>;
 
 	/* --- */
 
-	auto write(std::string_view value, const std::size_t length = 0)
+	auto write(std::string_view value, std::size_t length = 0)
 		-> std::expected<void, BinaryError>;
 
-	auto write(const std::byte value)
+	auto write(std::byte value)
 		-> std::expected<void, BinaryError>;
 
 	template<std::integral T>
-	auto write(T value, const std::endian endianness)
+	auto write(T value, std::endian endianness)
 		-> std::expected<void, BinaryError>
 	{
 		constexpr std::size_t value_size = sizeof(T);
@@ -128,7 +128,7 @@ public:
 		-> std::expected<void, BinaryError>;
 
 	template <std::integral T>
-	[[nodiscard]] static constexpr T set_endian(const T value, const std::endian endianness) noexcept
+	[[nodiscard]] static constexpr T set_endian(T value, std::endian endianness) noexcept
 	{
 		return (std::endian::native != endianness)
 			? std::byteswap(value)
@@ -195,17 +195,17 @@ public:
 		return *this;
 	}
 
-	BinaryView(const Binary& binary, const std::streampos start = 0);
+	BinaryView(const Binary& binary, std::streampos start = 0);
 
 	BinaryView(std::span<const std::byte> data, std::streampos start = 0);
 
-	BinaryView(const std::byte* src, const std::streampos start = 0);
+	BinaryView(const std::byte* src, std::streampos start = 0);
 	
-	void load(const Binary& binary, const std::streampos start = 0, const std::size_t size = size_max);
+	void load(const Binary& binary, std::streampos start = 0, std::size_t size = size_max);
 
 	void load(std::span<const std::byte> data, std::streampos start = 0);
 
-	void load(const std::byte* src, const std::streampos start = 0, const std::size_t size = size_max);
+	void load(const std::byte* src, std::streampos start = 0, std::size_t size = size_max);
 
 	/* --- */
 
@@ -213,7 +213,7 @@ public:
 		-> std::expected<std::byte, BinaryError>;
 
 	template <std::same_as<bool> T>
-	[[nodiscard]] auto peek_at(const std::size_t size, const std::streamoff target_pos) const
+	[[nodiscard]] auto peek_at(std::size_t size, std::streamoff target_pos) const
 		-> std::expected<T, BinaryError>
 	{
 		if (exceeded_size(target_pos + size - 1)) {
@@ -228,7 +228,7 @@ public:
 	}
 
 	template <std::integral T>
-	[[nodiscard]] auto peek_at(const std::endian endianness, const std::streamoff target_pos) const
+	[[nodiscard]] auto peek_at(std::endian endianness, std::streamoff target_pos) const
 		-> std::expected<T, BinaryError>
 	{
 		if (exceeded_size(target_pos + sizeof(T) - 1)) {
@@ -244,7 +244,7 @@ public:
 	}
 
 	template<std::same_as<std::byte> T>
-	[[nodiscard]] auto peek_at(const std::streamoff target_pos) const
+	[[nodiscard]] auto peek_at(std::streamoff target_pos) const
 		-> std::expected<T, BinaryError>
 	{
 		if (exceeded_size(target_pos + sizeof(T) - 1)) {
@@ -259,7 +259,7 @@ public:
 
 	// Strings of explicit length (copy).
 	template<std::same_as<std::string> T>
-	[[nodiscard]] auto peek_at(const std::size_t size, const std::streamoff target_pos) const
+	[[nodiscard]] auto peek_at(std::size_t size, std::streamoff target_pos) const
 		-> std::expected<T, BinaryError>
 	{
 		if (exceeded_size(target_pos + sizeof(T) - 1)) {
@@ -275,7 +275,7 @@ public:
 
 	// Null-terminated strings (reference).
 	template<std::same_as<std::string_view> T>
-	[[nodiscard]] auto peek_at(const std::streamoff target_pos) const
+	[[nodiscard]] auto peek_at(std::streamoff target_pos) const
 		-> std::expected<T, BinaryError>
 	{
 		if (exceeded_size(target_pos)) {
@@ -289,7 +289,7 @@ public:
 	}
 
 	template<typename T>
-	[[nodiscard]] auto peek_struct_at(const std::streamoff target_pos) const
+	[[nodiscard]] auto peek_struct_at(std::streamoff target_pos) const
 		-> std::expected<T, BinaryError>
 	{
 		if (exceeded_size(target_pos + sizeof(T) - 1)) {
@@ -304,21 +304,21 @@ public:
 	}
 
 	template<std::same_as<bool> T>
-	[[nodiscard]] auto peek(const std::size_t size, const std::streamoff offset = 0) const
+	[[nodiscard]] auto peek(std::size_t size, std::streamoff offset = 0) const
 		-> std::expected<T, BinaryError>
 	{
 		return peek_at<T>(size, pos + offset);
 	}
 
 	template<std::integral T>
-	[[nodiscard]] auto peek(const std::endian endianness, const std::streamoff offset = 0) const
+	[[nodiscard]] auto peek(std::endian endianness, std::streamoff offset = 0) const
 		-> std::expected<T, BinaryError>
 	{
 		return peek_at<T>(endianness, pos + offset);
 	}
 
 	template<std::same_as<std::byte> T>
-	[[nodiscard]] auto peek(const std::streamoff offset = 0) const
+	[[nodiscard]] auto peek(std::streamoff offset = 0) const
 		-> std::expected<T, BinaryError>
 	{
 		return peek_at<T>(pos + offset);
@@ -326,7 +326,7 @@ public:
 
 	// Strings of explicit length (copy).
 	template<std::same_as<std::string> T>
-	[[nodiscard]] auto peek(const std::size_t size, const std::streamoff offset = 0) const
+	[[nodiscard]] auto peek(std::size_t size, std::streamoff offset = 0) const
 		-> std::expected<T, BinaryError>
 	{
 		return peek_at<T>(size, pos + offset);
@@ -334,21 +334,21 @@ public:
 
 	// Null-terminated strings (reference).
 	template<std::same_as<std::string_view> T>
-	[[nodiscard]] auto peek(const std::streamoff offset = 0) const
+	[[nodiscard]] auto peek(std::streamoff offset = 0) const
 		-> std::expected<T, BinaryError>
 	{
 		return peek_at<T>(pos + offset);
 	}
 
 	template<typename T>
-	[[nodiscard]] auto peek_struct(const std::streamoff offset = 0) const
+	[[nodiscard]] auto peek_struct(std::streamoff offset = 0) const
 		-> std::expected<T, BinaryError>
 	{
 		return peek_struct_at<T>(pos + offset);
 	}
 
 	template<std::integral T>
-	[[nodiscard]] auto read(const std::size_t size)
+	[[nodiscard]] auto read(std::size_t size)
 		-> std::expected<T, BinaryError>
 	{
 		const auto result = peek<T>(size);
@@ -357,7 +357,7 @@ public:
 	}
 
 	template<std::integral T>
-	[[nodiscard]] auto read(const std::endian endianness)
+	[[nodiscard]] auto read(std::endian endianness)
 		-> std::expected<T, BinaryError>
 	{
 		const auto result = peek<T>(endianness);
@@ -376,7 +376,7 @@ public:
 
 	// Strings of explicit length (copy).
 	template<std::same_as<std::string> T>
-	[[nodiscard]] auto read(const std::size_t size)
+	[[nodiscard]] auto read(std::size_t size)
 		-> std::expected<T, BinaryError>
 	{
 		const auto result = peek<std::string>(size);
@@ -426,7 +426,7 @@ public:
 	void align_by(std::streamoff bytes);
 
 private:
-	[[nodiscard]] bool exceeded_size(const std::streampos target_pos) const;
+	[[nodiscard]] bool exceeded_size(std::streampos target_pos) const;
 
 	static constexpr std::size_t size_max = std::numeric_limits<std::size_t>::max();
 
