@@ -5,10 +5,11 @@ using namespace kojo;
 auto Binary::from(const std::filesystem::path& path) noexcept
 	-> std::expected<Binary, BinaryError>
 {
-	if (!std::filesystem::exists(path))
+	if (!std::filesystem::exists(path)) {
 		return std::unexpected{
 			BinaryError::FileNotFound{path}
 		};
+	}
 
 	if (!std::filesystem::is_regular_file(path)) {
 		return std::unexpected{
@@ -38,7 +39,7 @@ auto Binary::from(const std::filesystem::path& path) noexcept
 	}
 	file.read(reinterpret_cast<char*>(result.storage.data()), size);
 
-	const std::streamsize actual_file_size = file.gcount();
+	const auto actual_file_size = static_cast<std::size_t>(file.gcount());
 	if (actual_file_size != size) {
 		result.storage.resize(actual_file_size);
 	}

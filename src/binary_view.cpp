@@ -81,17 +81,17 @@ void BinaryView::change_pos(std::streamoff offset)
 void BinaryView::align_by(std::streamoff bytes)
 {
 	const std::size_t remainder = pos % bytes;
-	if (remainder) {
+	if (remainder != 0) {
 		pos += bytes - remainder;
 	}
 }
 
 auto BinaryView::exceeded_size(const std::streampos target_pos) const -> bool
 {
-	if (!address) {
+	if (address == nullptr) {
 		return true;
 	}
-	if (!end) {
+	if (end == nullptr) {
 		return false;
 	}
 	return address + target_pos > end;

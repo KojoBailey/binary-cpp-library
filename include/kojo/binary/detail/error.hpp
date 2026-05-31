@@ -16,7 +16,7 @@ struct BinaryError {
 	struct NullPointer {
 		static const std::uint32_t code = 0;
 
-		[[nodiscard]] static auto to_string() const -> std::string {
+		[[nodiscard]] static auto to_string() -> std::string {
 			return "Pointer is null.";
 		}
 	};
@@ -79,8 +79,8 @@ struct BinaryError {
 		const std::filesystem::path path;
 
 		FileNotFound() = delete;
-		FileNotFound(const std::filesystem::path _path)
-			: path(_path) {}
+		FileNotFound(std::filesystem::path _path)
+			: path(std::move(_path)) {}
 
 		[[nodiscard]] auto to_string() const -> std::string {
 			return std::format("File at \"{}\" could not be found.", path.string());
@@ -93,8 +93,8 @@ struct BinaryError {
 		const std::filesystem::path path;
 
 		InvalidFile() = delete;
-		InvalidFile(const std::filesystem::path _path)
-			: path(_path) {}
+		InvalidFile(std::filesystem::path _path)
+			: path(std::move(_path)) {}
 
 		[[nodiscard]] auto to_string() const -> std::string {
 			return std::format("File at \"{}\" is not a valid file. It may be a directory instead",
@@ -109,8 +109,8 @@ struct BinaryError {
 		const std::filesystem::path path;
 
 		FileNotOpen() = delete;
-		FileNotOpen(const std::filesystem::path _path)
-			: path(_path) {}
+		FileNotOpen(std::filesystem::path _path)
+			: path(std::move(_path)) {}
 
 		[[nodiscard]] auto to_string() const -> std::string {
 			return std::format("Could not open file at \"{}\".", path.string());
@@ -125,7 +125,7 @@ struct BinaryError {
 		FileNotFound,
 		InvalidFile,
 		FileNotOpen
-	> variant{};
+	> variant;
 
 	template<typename T>
 		requires std::constructible_from<decltype(variant), T>
