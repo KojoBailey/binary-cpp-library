@@ -124,7 +124,7 @@ public:
 		return {};
 	}
 
-	auto dump_file(const std::filesystem::path& output_path) const
+	[[nodiscard]] auto dump_file(const std::filesystem::path& output_path) const
 		-> std::expected<void, BinaryError>;
 
 	template <std::integral T>
