@@ -413,6 +413,9 @@ public:
 	[[nodiscard]] constexpr auto get_data() const noexcept
 		-> const std::byte* { return address; }
 
+	[[nodiscard]] auto get_pos_data() const noexcept
+		-> const std::byte* { return get_data() + get_pos(); }
+
 	[[nodiscard]] constexpr auto is_empty() const noexcept -> bool;
 
 	/* --- */
