@@ -63,20 +63,6 @@ class BinaryView;
 
 class Binary {
 public:
-	Binary() = default;
-
-	Binary(const Binary& other) = default;
-
-	auto operator=(const Binary& other) -> Binary& = default;
-
-	Binary(Binary&& other) noexcept = default;
-
-	auto operator=(Binary&& other) noexcept -> Binary& = default;
-
-	~Binary() = default;
-
-	/* --- */
-
 	[[nodiscard]] static auto from(const std::filesystem::path& file_path) noexcept
 		-> std::expected<Binary, BinaryError>;
 
@@ -167,20 +153,6 @@ private:
 /* This class does not own memory, similar to std::string_view. */
 class BinaryView {
 public:
-	BinaryView() = default;
-
-	BinaryView(const BinaryView& other) = default;
-
-	auto operator=(const BinaryView& other) -> BinaryView& = default;
-	
-	BinaryView(BinaryView&& other) noexcept = default;
-
-	auto operator=(BinaryView&& other) noexcept -> BinaryView& = default;
-
-	~BinaryView() = default;
-
-	/* --- */
-
 	BinaryView(const Binary& binary, std::streampos start = 0);
 
 	BinaryView(std::span<const std::byte> data, std::streampos start = 0);
