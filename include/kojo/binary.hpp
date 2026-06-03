@@ -69,18 +69,9 @@ public:
 
 	auto operator=(const Binary& other) -> Binary& = default;
 
-	Binary(Binary&& other) noexcept :
-		storage(std::move(other.storage)),
-		pos(other.pos) {}
+	Binary(Binary&& other) noexcept = default;
 
-	auto operator=(Binary&& other) noexcept -> Binary&
-	{
-		if (this != &other) {
-			storage = std::move(other.storage);
-			pos = other.pos;
-		}
-		return *this;
-	}
+	auto operator=(Binary&& other) noexcept -> Binary& = default;
 
 	~Binary() = default;
 
@@ -182,19 +173,13 @@ public:
 
 	auto operator=(const BinaryView& other) -> BinaryView& = default;
 	
+	BinaryView(BinaryView&& other) noexcept = default;
+
+	auto operator=(BinaryView&& other) noexcept -> BinaryView& = default;
+
 	~BinaryView() = default;
 
-	BinaryView(BinaryView&& other) noexcept :
-		address(other.address), pos(other.pos) {}
-
-	auto operator=(BinaryView&& other) noexcept -> BinaryView&
-	{
-		if (this != &other) {
-			address = other.address;
-			pos = other.pos;
-		}
-		return *this;
-	}
+	/* --- */
 
 	BinaryView(const Binary& binary, std::streampos start = 0);
 
