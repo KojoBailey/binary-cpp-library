@@ -58,11 +58,6 @@ constexpr auto BinaryView::is_empty() const noexcept -> bool
 	return address == nullptr;
 }
 
-auto BinaryView::get_pos() const -> std::size_t
-{
-	return pos;
-}
-
 auto BinaryView::is_at_end() const -> bool
 {
 	return exceeded_size(pos + 1); 

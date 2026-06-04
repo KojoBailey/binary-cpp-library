@@ -148,11 +148,6 @@ auto Binary::get_size() const -> std::size_t
 	return storage.size();
 }
 
-auto Binary::get_storage() const -> std::vector<std::byte>
-{
-	return storage;
-}
-
 auto Binary::get_data() const -> const std::byte*
 {
 	return storage.data();
@@ -163,17 +158,12 @@ auto Binary::is_empty() const -> bool
 	return storage.empty();
 }
 
-auto Binary::get_pos() const -> std::streampos
+void Binary::set_pos(const std::streampos new_pos)
 {
-	return pos;
+	pos = new_pos;
 }
 
-void Binary::set_pos(std::streampos _pos)
-{
-	pos = _pos;
-}
-
-void Binary::change_pos(std::streamoff offset)
+void Binary::change_pos(const std::streamoff offset)
 {
 	pos += offset;
 }
@@ -183,7 +173,7 @@ void Binary::go_to_end()
 	pos = storage.size();
 }
 
-void Binary::align_by(std::streamoff bytes)
+void Binary::align_by(const std::streamoff bytes)
 {
 	const std::size_t remainder = pos % bytes;
 	if (remainder != 0) {
