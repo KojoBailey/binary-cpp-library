@@ -1,0 +1,9 @@
+Checks: >-
+  clang-diagnostic-*,
+  clang-analyzer-*,
+  modernize-*,
+  performance-*,
+  readability-*,
+  -readability-identifier-length
+WarningsAsErrors: ""
+HeaderFilterRegex: "include/.*"
