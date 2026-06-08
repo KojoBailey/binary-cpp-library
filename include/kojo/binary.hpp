@@ -403,6 +403,12 @@ public:
 	[[nodiscard]] auto get_pos_data() const noexcept
 		-> const std::byte* { return address + pos; }
 
+	[[nodiscard]] auto get_span(std::size_t size = size_max) const noexcept
+		-> std::span<const std::byte>;
+
+	[[nodiscard]] auto get_pos_span(std::size_t size = size_max) const noexcept
+		-> std::span<const std::byte>;
+
 	[[nodiscard]] constexpr auto is_empty() const noexcept -> bool;
 
 	/* --- */
@@ -426,6 +432,9 @@ private:
 	const std::byte* address{nullptr};
 	const std::byte* end{nullptr};
 	std::size_t pos{0};
+
+	[[nodiscard]] auto calculate_size(std::size_t start = 0) const noexcept
+		-> std::size_t { return static_cast<std::size_t>(end - (address + start)); }
 };
 
 }

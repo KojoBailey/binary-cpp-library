@@ -53,6 +53,24 @@ constexpr auto BinaryView::operator[](std::size_t pos) const noexcept
 	return address[pos];
 }
 
+[[nodiscard]] auto BinaryView::get_span(std::size_t size) const noexcept
+	-> std::span<const std::byte>
+{
+	if (size == size_max) {
+		size = calculate_size();
+	}
+	return std::span<const std::byte>{address, size};
+}
+
+[[nodiscard]] auto BinaryView::get_pos_span(std::size_t size) const noexcept
+	-> std::span<const std::byte>
+{
+	if (size == size_max) {
+		size = calculate_size(pos);
+	}
+	return std::span<const std::byte>{address + pos, size};
+}
+
 constexpr auto BinaryView::is_empty() const noexcept -> bool
 {
 	return address == nullptr;
