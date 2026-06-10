@@ -66,7 +66,7 @@ struct BinaryError {
 
 		[[nodiscard]] auto to_string() const -> std::string {
 			return std::format(
-				"Tried to access data at address {:08x}, but data ends at address {:08}.",
+				"Tried to access data at address {:08x}, but data ends at address {:08x}.",
 				reinterpret_cast<std::size_t>(access_address),
 				reinterpret_cast<std::size_t>(end_address)
 			);
